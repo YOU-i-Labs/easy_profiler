@@ -223,6 +223,14 @@ will end previously opened EASY_BLOCK or EASY_FUNCTION.
             ::std::is_base_of<::profiler::ForceConstStr, decltype(name)>::value));\
     ::profiler::storeEvent(EASY_UNIQUE_DESC(__LINE__), EASY_RUNTIME_NAME(name));
 
+/** Macro for block with printf-style naming
+
+ */
+#define EASY_BLOCK_FORMATTED(color, name, ...) \
+    char EASY_TOKEN_CONCATENATE(__easy_buf,__LINE__)[128] = {};\
+    sprintf(EASY_TOKEN_CONCATENATE(__easy_buf,__LINE__), name,  __VA_ARGS__);\
+    EASY_BLOCK(EASY_TOKEN_CONCATENATE(__easy_buf,__LINE__), color);
+
 /** Macro for enabling profiler.
 
 \ingroup profiler
@@ -393,6 +401,7 @@ Otherwise, no log messages will be printed.
 # define EASY_PROFILER_ENABLE 
 # define EASY_PROFILER_DISABLE 
 # define EASY_EVENT(...)
+# define EASY_BLOCK_FORMATTED(...)
 # define EASY_THREAD(...)
 # define EASY_THREAD_SCOPE(...)
 # define EASY_MAIN_THREAD 
