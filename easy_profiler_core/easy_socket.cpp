@@ -39,6 +39,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 **/
 
+#if defined (YI_PORT_FILE_REQUIRED)
+#include <YiPort.h>
+#endif
+
 #include <easy/easy_socket.h>
 #include <string.h>
 #include <thread>
@@ -53,7 +57,13 @@ limitations under the License.
 # endif
 #else
 # include <errno.h>
+#ifndef __ORBIS__
 # include <sys/ioctl.h>
+#else
+//According to https://stackoverflow.com/questions/1150635/unix-nonblocking-i-o-o-nonblock-vs-fionbio the O_NONBLOCK and FIONBIO flags are treated equivalent under POSIX, but FIONBIO is not defined on PS4
+# define FIONBIO O_NONBLOCK
+# include <sys/ioccom.h>
+#endif
 #endif
 
 /////////////////////////////////////////////////////////////////
@@ -97,7 +107,7 @@ void EasySocket::setBlocking(EasySocket::socket_t s, bool blocking)
     ::ioctlsocket(s, FIONBIO, &iMode);
 #else
     int iMode = blocking ? 0 : 1;//0 - blocking, 1 - non blocking
-    ::ioctl(s, FIONBIO, (char*)&iMode);
+    ::fcntl(s, FIONBIO, (char*)&iMode);
 #endif
 }
 

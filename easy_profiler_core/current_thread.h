@@ -47,9 +47,11 @@ The Apache License, Version 2.0 (the "License");
 
 #ifdef _WIN32
 # include <Windows.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) or defined(__ORBIS__)
 # include <pthread.h>
+#if defined (__APPLE__)
 # include <Availability.h>
+#endif
 #else
 # include <sys/types.h>
 # include <unistd.h>
@@ -60,7 +62,7 @@ inline profiler::thread_id_t getCurrentThreadId()
 {
 #ifdef _WIN32
     return (profiler::thread_id_t)::GetCurrentThreadId();
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) or defined(__ORBIS__)
 #   if (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_6) || \
        (defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_8_0)
     EASY_THREAD_LOCAL static uint64_t _id = 0;

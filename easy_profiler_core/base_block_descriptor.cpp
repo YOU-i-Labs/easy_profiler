@@ -49,8 +49,8 @@ namespace profiler
                                              block_type_t _block_type, color_t _color) EASY_NOEXCEPT
         : m_id(_id)
         , m_line(_line)
-        , m_type(_block_type)
         , m_color(_color)
+        , m_type(_block_type)
         , m_status(_status)
     {
 
