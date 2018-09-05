@@ -62,6 +62,10 @@
 # endif
 #endif
 
+#if defined(_WIN32) && !defined(_UWP)
+#define USE_TRACING
+#endif
+
 #if !defined(EASY_PROFILER_VERSION_MAJOR) || !defined(EASY_PROFILER_VERSION_MINOR) || !defined(EASY_PROFILER_VERSION_PATCH)
 # ifdef _WIN32
 #  error EASY_PROFILER_VERSION_MAJOR and EASY_PROFILER_VERSION_MINOR and EASY_PROFILER_VERSION_PATCH macros must be defined
@@ -218,7 +222,7 @@ PROFILER_API bool isEventTracingEnabled()
     return ProfileManager::instance().isEventTracingEnabled();
 }
 
-# ifdef _WIN32
+# ifdef USE_TRACING 
 PROFILER_API void setLowPriorityEventTracing(bool _isLowPriority)
 {
     EasyEventTracer::instance().setLowPriority(_isLowPriority);

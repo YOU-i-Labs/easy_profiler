@@ -39,7 +39,7 @@ The Apache License, Version 2.0 (the "License");
     limitations under the License.
 
 **/
-
+#define WIN32_LEAN_AND_MEAN
 #include "thread_storage.h"
 #include "current_thread.h"
 #include "current_time.h"

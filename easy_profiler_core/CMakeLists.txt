@@ -110,13 +110,20 @@ message(STATUS "")
 
 
 #################################################
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
+    add_definitions("-D_UWP")
+else()
+    set (WIN_EVENT_TRACE_SOURCE event_trace_win.cpp)
+endif()
+
 # Add source files:
 set(CPP_FILES
     base_block_descriptor.cpp
     block.cpp
     block_descriptor.cpp
     easy_socket.cpp
-    event_trace_win.cpp
+    ${WIN_EVENT_TRACE_SOURCE}
     nonscoped_block.cpp
     profile_manager.cpp
     profiler.cpp
@@ -202,8 +209,11 @@ easy_define_target_option(easy_profiler EASY_OPTION_PROFILE_SELF EASY_OPTION_MEA
 easy_define_target_option(easy_profiler EASY_OPTION_PROFILE_SELF_BLOCKS_ON EASY_OPTION_STORAGE_EXPAND_BLOCKS_ON)
 easy_define_target_option(easy_profiler EASY_OPTION_IMPLICIT_THREAD_REGISTRATION EASY_OPTION_IMPLICIT_THREAD_REGISTRATION)
 if (WIN32)
-    easy_define_target_option(easy_profiler EASY_OPTION_EVENT_TRACING EASY_OPTION_EVENT_TRACING_ENABLED)
-    easy_define_target_option(easy_profiler EASY_OPTION_LOW_PRIORITY_EVENT_TRACING EASY_OPTION_LOW_PRIORITY_EVENT_TRACING)
+    if (${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
+    else()
+        easy_define_target_option(easy_profiler EASY_OPTION_EVENT_TRACING EASY_OPTION_EVENT_TRACING_ENABLED)
+        easy_define_target_option(easy_profiler EASY_OPTION_LOW_PRIORITY_EVENT_TRACING EASY_OPTION_LOW_PRIORITY_EVENT_TRACING)
+    endif()
 else ()
     easy_define_target_option(easy_profiler EASY_OPTION_REMOVE_EMPTY_UNGUARDED_THREADS EASY_OPTION_REMOVE_EMPTY_UNGUARDED_THREADS)
 endif ()

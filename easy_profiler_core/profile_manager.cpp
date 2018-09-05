@@ -77,6 +77,10 @@
 #if EASY_OPTION_LOG_ENABLED != 0
 # include <iostream>
 
+#if defined(_WIN32) && !defined(_UWP)
+#define USE_TRACING
+#endif
+
 # ifndef EASY_ERRORLOG
 #  define EASY_ERRORLOG std::cerr
 # endif
@@ -810,7 +814,7 @@ profiler::timestamp_t ProfileManager::curFrameDuration() const
 
 void ProfileManager::enableEventTracer()
 {
-#ifdef _WIN32
+#ifdef USE_TRACING 
     if (m_isEventTracingEnabled.load(std::memory_order_acquire))
         EasyEventTracer::instance().enable(true);
 #endif
@@ -818,7 +822,7 @@ void ProfileManager::enableEventTracer()
 
 void ProfileManager::disableEventTracer()
 {
-#ifdef _WIN32
+#ifdef USE_TRACING 
     EasyEventTracer::instance().disable();
 #endif
 }
@@ -1423,7 +1427,7 @@ void ProfileManager::listen(uint16_t _port)
         // Send reply
         {
             const bool wasLowPriorityET =
-#ifdef _WIN32
+#ifdef USE_TRACING
                 EasyEventTracer::instance().isLowPriority();
 #else
                 false;
@@ -1673,7 +1677,7 @@ void ProfileManager::listen(uint16_t _port)
 
                     EASY_LOGMSG("receive MessageType::Change_Event_Tracing_Priority low=" << data->flag << std::endl);
 
-#if defined(_WIN32)
+#if defined(USE_TRACING)
                     EasyEventTracer::instance().setLowPriority(data->flag);
 #endif
                     break;

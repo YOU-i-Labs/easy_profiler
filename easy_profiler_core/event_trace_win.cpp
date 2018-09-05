@@ -55,8 +55,7 @@
 *                   : See the License for the specific language governing permissions and
 *                   : limitations under the License.
 ************************************************************************/
-
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(_UWP)
 #include <memory.h>
 #include <chrono>
 #include <unordered_map>
