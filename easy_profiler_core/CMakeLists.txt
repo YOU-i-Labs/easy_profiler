@@ -2,8 +2,6 @@ message(STATUS "")
 message(STATUS "EASY_PROFILER.Core version = ${EASY_PRODUCT_VERSION_STRING}")
 message(STATUS "")
 
-
-
 #####################################################################
 # Checking c++11 thread_local support
 if (NOT WIN32)
@@ -20,7 +18,6 @@ if (NOT WIN32)
             set(NO_CXX11_THREAD_LOCAL_SUPPORT TRUE)
         endif ()
     endif ()
-
     # TODO: Check thread_local keyword support for other compilers for Unix
 
     if (NO_CXX11_THREAD_LOCAL_SUPPORT)
