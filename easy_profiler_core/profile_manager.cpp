@@ -1448,10 +1448,14 @@ void ProfileManager::listen(uint16_t _port)
                     socket.setReceiveTimeout(0);
                     clear_sstream(os);
                 }
-                else if (dumpingResult.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+#if defined(__pnacl__) || defined(__native_client__)
+                else //will force a blocking call at std::future::get below -- the wait_for was not working on tizen.
+#else
+		else if (dumpingResult.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+#endif
                 {
                     dumping = false;
-                    dumpingResult.get();
+                    dumpingResult.get(); //blocking call if the result is not already ready
 
                     const auto size = os.tellp();
                     static const decltype(size) badSize = -1;

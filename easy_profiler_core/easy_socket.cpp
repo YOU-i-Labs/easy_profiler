@@ -57,12 +57,18 @@ limitations under the License.
 # endif
 #else
 # include <errno.h>
-#ifndef __ORBIS__
-# include <sys/ioctl.h>
-#else
-//According to https://stackoverflow.com/questions/1150635/unix-nonblocking-i-o-o-nonblock-vs-fionbio the O_NONBLOCK and FIONBIO flags are treated equivalent under POSIX, but FIONBIO is not defined on PS4
-# define FIONBIO O_NONBLOCK
-# include <sys/ioccom.h>
+# ifndef FIONBIO
+//According to https://stackoverflow.com/questions/1150635/unix-nonblocking-i-o-o-nonblock-vs-fionbio the O_NONBLOCK and FIONBIO flags are treated equivalent under POSIX, but FIONBIO is not defined on PS4 or on tizen
+#  define FIONBIO O_NONBLOCK
+# endif 
+# if defined(__pnacl__) || defined(__native_client__)
+#  include <sys/time.h>
+#  include <sys/fcntl.h>
+#  include <sys/select.h>
+# elif defined(__ORBIS__)
+#  include <sys/ioccom.h>
+# else
+#  include <sys/ioctl.h>
 #endif
 #endif
 
@@ -275,7 +281,7 @@ int EasySocket::send(const void* buffer, size_t nbytes)
     if (!checkSocket(m_replySocket))
         return -1;
 
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || defined(__pnacl__) || defined(__native_client__)
     const int res = ::send(m_replySocket, (const char*)buffer, (int)nbytes, 0);
 #else
     const int res = (int)::send(m_replySocket, buffer, nbytes, MSG_NOSIGNAL);
