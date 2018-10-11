@@ -173,6 +173,8 @@ public:
     void stopListen();
     bool isListening() const;
 
+    void setLogAddress(const char* _ip, uint16_t _port);
+
     profiler::timestamp_t ticks2ns(profiler::timestamp_t ticks) const;
     profiler::timestamp_t ticks2us(profiler::timestamp_t ticks) const;
 

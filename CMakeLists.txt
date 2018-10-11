@@ -13,6 +13,8 @@ else ()
 endif ()
 
 option(EASY_PROFILER_NO_GUI "Build easy_profiler without the GUI application (required Qt)" OFF)
+option(EASY_PROFILER_NO_SAMPLES "Build samples" OFF)
+option(EASY_PROFILER_NO_CONVERTER "Build converter" OFF)
 
 set(EASY_PROGRAM_VERSION_MAJOR 2)
 set(EASY_PROGRAM_VERSION_MINOR 1)
@@ -37,10 +39,14 @@ endmacro()
 SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 
 add_subdirectory(easy_profiler_core)
+
 if (NOT EASY_PROFILER_NO_GUI)
     add_subdirectory(profiler_gui)
 endif()
-add_subdirectory(easy_profiler_converter)
+
+if (NOT EASY_PROFILER_NO_CONVERTER)
+    add_subdirectory(easy_profiler_converter)
+endif()
 
 if (NOT EASY_PROFILER_NO_SAMPLES)
     add_subdirectory(sample)
