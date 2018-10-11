@@ -74,6 +74,34 @@
 # include <mach/mach.h>
 #endif
 
+static std::string logAddr = "127.0.0.1";
+static uint16_t logPort = 0;
+static EasySocket* logSock = nullptr;
+
+#define EASY_OPTION_LOG_ENABLED 1
+
+void sendLogMsg(std::string s) {
+
+    if (logPort == 0) {
+        return;
+    }
+
+    if (!logSock) {
+        logSock = new EasySocket();
+        logSock->setAddress(logAddr.c_str(), logPort);
+        logSock->connect();
+    }
+
+    logSock->send(s.c_str(), s.size());
+    logSock->send("\r\n", 2);
+}
+
+void ProfileManager::setLogAddress(const char* _ip, uint16_t _port)
+{
+    logAddr = _ip;
+    logPort = _port;
+}
+
 #if EASY_OPTION_LOG_ENABLED != 0
 # include <iostream>
 
@@ -90,15 +118,15 @@
 # endif
 
 # ifndef EASY_ERROR
-#  define EASY_ERROR(LOG_MSG) EASY_ERRORLOG << "EasyProfiler ERROR: " << LOG_MSG
+#  define EASY_ERROR(LOG_MSG) do { std::stringstream ss; ss << "EasyProfiler ERROR: " << LOG_MSG ; sendLogMsg(ss.str());} while(0)
 # endif
 
 # ifndef EASY_WARNING
-#  define EASY_WARNING(LOG_MSG) EASY_ERRORLOG << "EasyProfiler WARNING: " << LOG_MSG
+#  define EASY_WARNING(LOG_MSG) do { std::stringstream ss; ss << "EasyProfiler WARN: " << LOG_MSG ; sendLogMsg(ss.str()); } while(0)
 # endif
 
 # ifndef EASY_LOGMSG
-#  define EASY_LOGMSG(LOG_MSG) EASY_LOG << "EasyProfiler INFO: " << LOG_MSG
+#  define EASY_LOGMSG(LOG_MSG) do { std::stringstream ss; ss << "EasyProfiler INFO: " << LOG_MSG ; sendLogMsg(ss.str()); } while(0)
 # endif
 
 # ifndef EASY_LOG_ONLY
@@ -1419,8 +1447,11 @@ void ProfileManager::listen(uint16_t _port)
         if (dumping)
             stopDumping();
 
+        EASY_LOGMSG("Listen for connection\n");
         socket.listen();
+        EASY_LOGMSG("Accept connection\n");
         socket.accept();
+        EASY_LOGMSG("Accepted connection\n");
 
         bool hasConnect = true;
 

@@ -252,6 +252,11 @@ PROFILER_API void startListen(uint16_t _port)
     return ProfileManager::instance().startListen(_port);
 }
 
+PROFILER_API void setLogAddress(const char* _ip, uint16_t _port)
+{
+  return ProfileManager::instance().setLogAddress(_ip, _port);
+}
+
 PROFILER_API void stopListen()
 {
     return ProfileManager::instance().stopListen();

@@ -655,6 +655,10 @@ namespace profiler {
         */
         PROFILER_API void startListen(uint16_t _port = ::profiler::DEFAULT_PORT);
 
+        /** Youi HACK FOR LOGS
+        */
+        PROFILER_API void setLogAddress(const char* _ip, uint16_t _port);
+
         /** Stops listening thread.
 
         \note This would be invoked automatically on application exit.

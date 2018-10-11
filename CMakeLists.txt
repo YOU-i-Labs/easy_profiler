@@ -20,7 +20,8 @@ else ()
 endif ()
 
 option(EASY_PROFILER_NO_GUI "Build easy_profiler without the GUI application (required Qt)" OFF)
-option(EASY_PROFILER_NO_CONVERTER "Build easy_profiler without the converter" OFF)
+option(EASY_PROFILER_NO_SAMPLES "Build samples" OFF)
+option(EASY_PROFILER_NO_CONVERTER "Build converter" OFF)
 
 set(EASY_PROGRAM_VERSION_MAJOR 2)
 set(EASY_PROGRAM_VERSION_MINOR 1)
@@ -45,6 +46,7 @@ endmacro()
 SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 
 add_subdirectory(easy_profiler_core)
+
 if (NOT EASY_PROFILER_NO_GUI AND (NOT VS2017 OR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} MATCHES "Release-prefix"))
     # For VS2017, build only in release
     add_subdirectory(profiler_gui)
