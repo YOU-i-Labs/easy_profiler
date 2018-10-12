@@ -74,32 +74,39 @@
 # include <mach/mach.h>
 #endif
 
-static std::string logAddr = "127.0.0.1";
-static uint16_t logPort = 0;
 static EasySocket* logSock = nullptr;
+static profiler::timestamp_t lastConnectAttempt = 0;
 
 #define EASY_OPTION_LOG_ENABLED 1
 
 void sendLogMsg(std::string s) {
 
-    if (logPort == 0) {
-        return;
+    if (logSock) {
+
+        profiler::timestamp_t now = profiler::clock::now();
+
+        // Only try to connect every 2 seconds, or else!!!
+        if (!logSock->isConnected() && (now - lastConnectAttempt) > 2000000) {
+            logSock->connect();
+            lastConnectAttempt = now;
+        }
+
+        if (logSock->isConnected()){
+            logSock->send(s.c_str(), s.size());
+            logSock->send("\r\n", 2);
+        }
+
     }
 
-    if (!logSock) {
-        logSock = new EasySocket();
-        logSock->setAddress(logAddr.c_str(), logPort);
-        logSock->connect();
-    }
-
-    logSock->send(s.c_str(), s.size());
-    logSock->send("\r\n", 2);
 }
 
 void ProfileManager::setLogAddress(const char* _ip, uint16_t _port)
 {
-    logAddr = _ip;
-    logPort = _port;
+    // Allocate new easy-socket
+    if (!logSock) {
+        logSock = new EasySocket();
+        logSock->setAddress(_ip, _port);
+    }
 }
 
 #if EASY_OPTION_LOG_ENABLED != 0
@@ -1443,12 +1450,8 @@ void ProfileManager::listen(uint16_t _port)
         if (dumping)
             stopDumping();
 
-        EASY_LOGMSG("Listen for connection\n");
         socket.listen();
-        EASY_LOGMSG("Accept connection\n");
         socket.accept();
-        EASY_LOGMSG("Accepted connection\n");
-
         bool hasConnect = true;
 
         // Send reply
@@ -1463,6 +1466,10 @@ void ProfileManager::listen(uint16_t _port)
 
             bytes = socket.send(&connectionReply, sizeof(profiler::net::EasyProfilerStatus));
             hasConnect = bytes > 0;
+        }
+
+        if (hasConnect) {
+            EASY_LOGMSG("Accepted or has established connection\n");
         }
 
         while (hasConnect && !m_stopListen.load(std::memory_order_acquire))
@@ -1530,7 +1537,10 @@ void ProfileManager::listen(uint16_t _port)
 
             hasConnect = socket.isConnected();
             if (!hasConnect || bytes < static_cast<int>(sizeof(profiler::net::Message)))
+            {
+                EASY_LOGMSG("Lost connection\n");
                 continue;
+            }
 
             auto message = (const profiler::net::Message*)buffer;
             if (!message->isEasyNetMessage())
