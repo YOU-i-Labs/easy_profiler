@@ -422,6 +422,10 @@ void BlocksTreeWidget::onIdleTimeout()
     if (focusWidget != nullptr)
         return;
 
+    if (!window()->isActiveWindow()) {
+        return;
+    }
+
     m_valueTooltip = new ArbitraryValueToolTip(itemUnderCursor->text(COL_NAME), block, this);
     m_valueTooltip->move(QCursor::pos());
     m_valueTooltip->show();
