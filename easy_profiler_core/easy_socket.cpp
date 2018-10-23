@@ -62,14 +62,14 @@ limitations under the License.
 #  define FIONBIO O_NONBLOCK
 # endif 
 # if defined(__pnacl__) || defined(__native_client__)
-#  include <sys/time.h>
 #  include <sys/fcntl.h>
 #  include <sys/select.h>
+#  include <sys/time.h>
 # elif defined(__ORBIS__)
 #  include <sys/ioccom.h>
 # else
 #  include <sys/ioctl.h>
-#endif
+# endif
 #endif
 
 /////////////////////////////////////////////////////////////////

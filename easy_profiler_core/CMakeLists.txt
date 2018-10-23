@@ -2,6 +2,8 @@ message(STATUS "")
 message(STATUS "EASY_PROFILER.Core version = ${EASY_PRODUCT_VERSION_STRING}")
 message(STATUS "")
 
+
+
 #####################################################################
 # Checking c++11 thread_local support
 if (NOT WIN32)
@@ -19,7 +21,7 @@ if (NOT WIN32)
         endif ()
     endif ()
     # TODO: Check thread_local keyword support for other compilers for Unix
-
+    
     if (NO_CXX11_THREAD_LOCAL_SUPPORT)
         message(WARNING "  Your compiler does not support C++11 thread_local feature.")
         message(WARNING "  Without C++11 thread_local feature you may face to possible memory leak or application crash if using implicit thread registration and using EASY_THREAD instead of EASY_THREAD_SCOPE.")
@@ -206,8 +208,7 @@ easy_define_target_option(easy_profiler EASY_OPTION_PROFILE_SELF EASY_OPTION_MEA
 easy_define_target_option(easy_profiler EASY_OPTION_PROFILE_SELF_BLOCKS_ON EASY_OPTION_STORAGE_EXPAND_BLOCKS_ON)
 easy_define_target_option(easy_profiler EASY_OPTION_IMPLICIT_THREAD_REGISTRATION EASY_OPTION_IMPLICIT_THREAD_REGISTRATION)
 if (WIN32)
-    if (${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
-    else()
+    if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
         easy_define_target_option(easy_profiler EASY_OPTION_EVENT_TRACING EASY_OPTION_EVENT_TRACING_ENABLED)
         easy_define_target_option(easy_profiler EASY_OPTION_LOW_PRIORITY_EVENT_TRACING EASY_OPTION_LOW_PRIORITY_EVENT_TRACING)
     endif()
@@ -227,7 +228,7 @@ easy_define_target_option(easy_profiler EASY_OPTION_PREDEFINED_COLORS EASY_OPTIO
 if (UNIX)
     target_compile_options(easy_profiler PRIVATE -Wall -Wno-long-long -Wno-reorder -Wno-braced-scalar-init -pedantic)
     if (NOT ANDROID)
-    	#Android uses bionic which has its own implementation of pthread
+        #Android uses bionic which has its own implementation of pthread
         target_link_libraries(easy_profiler pthread)
     endif()
 elseif (WIN32)

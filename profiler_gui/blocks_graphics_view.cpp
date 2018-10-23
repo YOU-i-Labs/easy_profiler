@@ -2179,11 +2179,11 @@ void BlocksGraphicsView::onIdleTimeout()
 
     decltype(scenePos) pos(m_offset + scenePos.x() / m_scale, scenePos.y());
 
-    // Try to select one of context switches or items
     if (!window()->isActiveWindow()) {
         return;
     }
 
+    // Try to select one of context switches or items
     for (auto item : m_items)
     {
         auto cse = item->intersectEvent(pos);

@@ -63,7 +63,7 @@
 #endif
 
 #if defined(_WIN32) && !defined(_UWP)
-#define USE_TRACING
+# define USE_TRACING
 #endif
 
 #if !defined(EASY_PROFILER_VERSION_MAJOR) || !defined(EASY_PROFILER_VERSION_MINOR) || !defined(EASY_PROFILER_VERSION_PATCH)

@@ -50,9 +50,9 @@ The Apache License, Version 2.0 (the "License");
 // Unix
 # include <sys/types.h>
 # include <sys/socket.h>
-#if !defined(__ORBIS__)
-# include <netdb.h>
-#endif
+# if !defined(__ORBIS__)
+#  include <netdb.h>
+# endif
 # include <stdio.h>
 # include <unistd.h>
 # include <fcntl.h>
@@ -96,9 +96,6 @@ private:
     struct hostent* m_server = nullptr;
     struct sockaddr_in m_serverAddress;
 
-#if defined(__ORBIS__)
-    int32_t youi_receiveFlag;
-#endif
     ConnectionState m_state = ConnectionState::Unknown;
 
 public:
