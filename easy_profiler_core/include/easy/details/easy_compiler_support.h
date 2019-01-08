@@ -53,6 +53,11 @@
 
 #include <cstddef>
 
+// Required to get the iOS/tvOS simulator macros
+#if __has_include(<TargetConditionals.h>)
+#include <TargetConditionals.h>
+#endif
+
 #if defined(_WIN32) && !defined(EASY_PROFILER_STATIC)
 // Visual Studio and MinGW
 # ifdef _BUILD_PROFILER
@@ -125,6 +130,13 @@
 
 # define EASY_FORCE_INLINE inline __attribute__((always_inline))
 # undef EASY_COMPILER_VERSION
+
+// There is no support for thread-local storage on iOS/tvOS simulators
+#if TARGET_OS_SIMULATOR
+    #undef EASY_CXX11_TLS_AVAILABLE
+    #undef EASY_THREAD_LOCAL
+    #define EASY_THREAD_LOCAL
+#endif
 
 #elif defined(__GNUC__)
 //////////////////////////////////////////////////////////////////////////
