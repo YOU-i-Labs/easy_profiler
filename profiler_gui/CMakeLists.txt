@@ -4,7 +4,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt5Widgets)
+include(hunter_configuration_types)
+hunter_configuration_types(Qt CONFIGURATION_TYPES Release)
+hunter_add_package(Qt)
+find_package(Qt5PrintSupport REQUIRED)
+find_package(Qt5Widgets REQUIRED)
 
 if (Qt5Widgets_FOUND)
     if (NOT("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") AND WIN32)
@@ -63,7 +67,12 @@ if (Qt5Widgets_FOUND)
         resources.qrc
         resources.rc
     )
-    target_link_libraries(profiler_gui Qt5::Widgets easy_profiler)
+
+    if (APPLE)
+        target_link_libraries(profiler_gui PUBLIC "-framework Security")
+    endif()
+
+    target_link_libraries(profiler_gui PUBLIC Qt5::Widgets Qt5::PrintSupport easy_profiler)
     if (WIN32)
         target_compile_definitions(profiler_gui PRIVATE -D_WIN32_WINNT=0x0600)
     endif ()
@@ -74,6 +83,8 @@ if (Qt5Widgets_FOUND)
     install(
         TARGETS
         profiler_gui
+        CONFIGURATIONS
+        Release
         RUNTIME
         DESTINATION
         bin
