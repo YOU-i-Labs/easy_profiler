@@ -19,6 +19,22 @@ else ()
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif ()
 
+if (MSVC)
+    # We want to link statically, but the default method is dynamically.
+    # For MSVC, CMake sets certain flags to defaults we want to override.
+    # This replacement code is taken from sample in the CMake Wiki at
+    # see: https://gitlab.kitware.com/cmake/community/wikis/FAQ#dynamic-replace.
+    foreach (flag_var
+            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+            CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+        if (${flag_var} MATCHES "/MD")
+            string(REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+        endif()
+    endforeach()
+endif()
+
 option(EASY_PROFILER_NO_GUI "Build easy_profiler without the GUI application (required Qt)" OFF)
 option(EASY_PROFILER_NO_CONVERTER "Build easy_profiler without the converter" OFF)
 
@@ -45,7 +61,8 @@ endmacro()
 SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 
 add_subdirectory(easy_profiler_core)
-if (NOT EASY_PROFILER_NO_GUI)
+if (NOT EASY_PROFILER_NO_GUI AND (NOT MSVC OR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} MATCHES "Release-prefix"))
+    # For MSVC, build only in release
     add_subdirectory(profiler_gui)
 endif()
 if (NOT EASY_PROFILER_NO_CONVERTER)
