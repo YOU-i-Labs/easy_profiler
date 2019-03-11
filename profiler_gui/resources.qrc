@@ -1,4 +1,7 @@
 <!DOCTYPE RCC><RCC version="1.0">
+    <qresource prefix="/fonts">
+        <file alias="DejaVuSans.ttf">fonts/DejaVuSans.ttf</file>
+    </qresource>
     <qresource prefix="/themes">
         <file alias="default">themes/default.css</file>
     </qresource>

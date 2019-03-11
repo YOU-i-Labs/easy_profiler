@@ -50,6 +50,7 @@
 
 #include <chrono>
 #include <QApplication>
+#include <QFontDatabase>
 #include "main_window.h"
 #include "globals.h"
 #include "thread_pool.h"
@@ -67,6 +68,16 @@ int main(int argc, char **argv)
     ThreadPool::instance();
 
     QApplication app(argc, argv);
+
+#if defined(Q_OS_LINUX)
+    QString fontPath = ":/fonts/DejaVuSans.ttf";
+    int fontId = QFontDatabase::addApplicationFont(fontPath);
+    if (fontId != -1)
+    {
+        QFont font("DejaVu Sans");
+        app.setFont(font);
+    }
+#endif
 
     // Instanciate easy globals after QApplication to allow creation of global fonts, and on the main thread to avoid data races
     profiler_gui::Globals::instance();

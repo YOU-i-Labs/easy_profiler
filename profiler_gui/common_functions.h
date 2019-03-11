@@ -202,9 +202,9 @@ inline int percent(::profiler::timestamp_t _partial, ::profiler::timestamp_t _to
 
 //////////////////////////////////////////////////////////////////////////
 
-QFont EFont(QFont::StyleHint _hint, const char* _family, int _size, int _weight = -1);
+QFont EFont(QFont::StyleHint _hint, const char* _family, int _size, int _weight = 1);
 
-inline QFont EFont(const char* _family, int _size, int _weight = -1) {
+inline QFont EFont(const char* _family, int _size, int _weight = 1) {
     return EFont(QFont::Helvetica, _family, _size, _weight);
 }
 
