@@ -19,9 +19,9 @@ else ()
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif ()
 
-if (MSVC)
+if (VS2017)
     # We want to link statically, but the default method is dynamically.
-    # For MSVC, CMake sets certain flags to defaults we want to override.
+    # For VS2017, CMake sets certain flags to defaults we want to override.
     # This replacement code is taken from sample in the CMake Wiki at
     # see: https://gitlab.kitware.com/cmake/community/wikis/FAQ#dynamic-replace.
     foreach (flag_var
@@ -61,8 +61,8 @@ endmacro()
 SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 
 add_subdirectory(easy_profiler_core)
-if (NOT EASY_PROFILER_NO_GUI AND (NOT MSVC OR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} MATCHES "Release-prefix"))
-    # For MSVC, build only in release
+if (NOT EASY_PROFILER_NO_GUI AND (NOT VS2017 OR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} MATCHES "Release-prefix"))
+    # For VS2017, build only in release
     add_subdirectory(profiler_gui)
 endif()
 if (NOT EASY_PROFILER_NO_CONVERTER)
