@@ -54,8 +54,10 @@
 #include <cstddef>
 
 // Required to get the iOS/tvOS simulator macros
-#if __has_include(<TargetConditionals.h>)
-#include <TargetConditionals.h>
+#ifdef __has_include
+# if __has_include(<TargetConditionals.h>)
+#  include <TargetConditionals.h>
+# endif
 #endif
 
 #if defined(_WIN32) && !defined(EASY_PROFILER_STATIC)
