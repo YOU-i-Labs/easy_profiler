@@ -4,11 +4,44 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include(hunter_configuration_types)
-hunter_configuration_types(Qt CONFIGURATION_TYPES Release)
-hunter_add_package(Qt)
-find_package(Qt5PrintSupport REQUIRED)
-find_package(Qt5Widgets REQUIRED)
+option(EASY_PROFILER_GUI_WITH_PREBUILT_QT "Use prebuilt Qt tarball to build the GUI" ON)
+
+if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND OSX)
+    
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/qt5
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+
+    # Using Qt pre-builts because xcode10 and xcode11 have issues with building Qt not for the targetted IDEs SDK.
+    # These prebuilts are from hunter_cache built on jenkins with XCode10 on OSX 10.14. This version of Qt works on 10.15 fine.
+    # qt_5.11.3_osx10.14_prebuilt.tar.bz2   is   02209aee16a800a37a7705c38220e4c5326778fe.tar.bz2 from hunter
+    # qt_5.11.3_osx10.14_cmakeextras.tar.bz2   is   946f04a12348edc49e0bbbf6fe865c7e2c5cc35e.tar.bz2 from hunter
+
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_prebuilt.tar.bz2
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_cmakeextras.tar.bz2
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
+        RESULT_VARIABLE error_code
+    )
+
+    if(error_code)
+        message(FATAL_ERROR "Failed to extarct qt prebuilt")
+    endif()
+      
+    find_package(Qt5PrintSupport CONFIG REQUIRED PATHS ${CMAKE_BINARY_DIR}/qt5/lib/cmake/Qt5PrintSupport)
+    find_package(Qt5Widgets CONFIG REQUIRED PATHS ${CMAKE_BINARY_DIR}/qt5/lib/cmake/Qt5Widgets)
+
+else()
+    include(hunter_configuration_types)
+    hunter_configuration_types(Qt CONFIGURATION_TYPES Release)
+    hunter_add_package(Qt)
+    find_package(Qt5PrintSupport REQUIRED)
+    find_package(Qt5Widgets REQUIRED)
+endif()
+
+
+
 
 if (LINUX)
     find_package(ZLIB REQUIRED)
