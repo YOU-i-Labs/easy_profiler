@@ -4,11 +4,43 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include(hunter_configuration_types)
-hunter_configuration_types(Qt CONFIGURATION_TYPES Release)
-hunter_add_package(Qt)
-find_package(Qt5PrintSupport REQUIRED)
-find_package(Qt5Widgets REQUIRED)
+option(EASY_PROFILER_GUI_WITH_PREBUILT_QT "Use prebuilt Qt tarball to build the GUI" ON)
+
+if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND OSX)
+    
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/qt5
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+
+    # Using Qt pre-builts because xcode10 and xcode11 have issues with building Qt not for the targetted IDEs SDK.
+    # qt_5.11.3_osx_prebuilt.tar.bz2   is   c6b0483e749da0edccf2e67e4c61627b49fc1036.tar.bz2 from hunter
+    # qt_5.11.3_osx_hunter.tar.bz2   is   f1356d356ca94a44e7287e358e065dc681c8e3d4.tar.bz2 from hunter
+
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx_prebuilt.tar.bz2
+        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx_hunter.tar.bz2
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
+        RESULT_VARIABLE error_code
+    )
+
+    if(error_code)
+        message(FATAL_ERROR "Failed to extarct qt prebuilt")
+    endif()
+      
+    find_package(Qt5PrintSupport CONFIG REQUIRED PATHS ${CMAKE_BINARY_DIR}/qt5/lib/cmake/Qt5PrintSupport)
+    find_package(Qt5Widgets CONFIG REQUIRED PATHS ${CMAKE_BINARY_DIR}/qt5/lib/cmake/Qt5Widgets)
+
+else()
+    include(hunter_configuration_types)
+    hunter_configuration_types(Qt CONFIGURATION_TYPES Release)
+    hunter_add_package(Qt)
+    find_package(Qt5PrintSupport REQUIRED)
+    find_package(Qt5Widgets REQUIRED)
+endif()
+
+
+
 
 if (LINUX)
     find_package(ZLIB REQUIRED)
