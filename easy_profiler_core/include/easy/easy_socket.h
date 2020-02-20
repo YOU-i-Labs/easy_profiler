@@ -50,7 +50,7 @@ The Apache License, Version 2.0 (the "License");
 // Unix
 # include <sys/types.h>
 # include <sys/socket.h>
-# if !defined(__ORBIS__)
+# if !defined(__ORBIS__) && !defined(__PROSPERO__)
 #  include <netdb.h>
 # endif
 # include <stdio.h>

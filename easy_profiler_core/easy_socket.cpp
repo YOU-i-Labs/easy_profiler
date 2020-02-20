@@ -68,7 +68,7 @@ limitations under the License.
 #  include <sys/fcntl.h>
 #  include <sys/select.h>
 #  include <sys/time.h>
-# elif defined(__ORBIS__)
+# elif defined(__ORBIS__) || defined(__PROSPERO__)
 #  include <sys/ioccom.h>
 # else
 #  include <sys/ioctl.h>

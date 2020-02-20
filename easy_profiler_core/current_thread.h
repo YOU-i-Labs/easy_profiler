@@ -54,7 +54,7 @@ The Apache License, Version 2.0 (the "License");
 # include <sys/mman.h>
 # include <process.h>
 # define __NR_gettid SYS_gettid
-#elif defined(__ORBIS__)
+#elif defined(__ORBIS__) || defined(__PROSPERO__)
 # include <pthread.h>
 #else
 # include <sys/types.h>
@@ -72,7 +72,7 @@ inline profiler::thread_id_t getCurrentThreadId()
 {
 #ifdef _WIN32
     return (profiler::thread_id_t)::GetCurrentThreadId();
-#elif defined(__ORBIS__)
+#elif defined(__ORBIS__) || defined(__PROSPERO__)
     return (profiler::thread_id_t)YiGetCurrentThreadId();
 #elif defined(__APPLE__) || defined(__pnacl__) || defined(__native_client__)
 #   if (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_6) || \
