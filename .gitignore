@@ -3,3 +3,6 @@ bin
 .*
 *.user
 /*.prof
+qt5*
+qt5_*
+qt_*

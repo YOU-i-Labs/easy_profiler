@@ -6,24 +6,32 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 option(EASY_PROFILER_GUI_WITH_PREBUILT_QT "Use prebuilt Qt tarball to build the GUI" ON)
 
-if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND OSX)
+if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND (OSX OR LINUX))
     
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/qt5
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 
-    # Using Qt pre-builts because xcode10 and xcode11 have issues with building Qt not for the targetted IDEs SDK.
-    # These prebuilts are from hunter_cache built on jenkins with XCode10 on OSX 10.14. This version of Qt works on 10.15 fine.
-    # qt_5.11.3_osx10.14_prebuilt.tar.bz2   is   02209aee16a800a37a7705c38220e4c5326778fe.tar.bz2 from hunter
-    # qt_5.11.3_osx10.14_cmakeextras.tar.bz2   is   946f04a12348edc49e0bbbf6fe865c7e2c5cc35e.tar.bz2 from hunter
-
-    execute_process(
-        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_prebuilt.tar.bz2
-        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_cmakeextras.tar.bz2
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
-        RESULT_VARIABLE error_code
-    )
+    if (OSX)
+        # Using Qt pre-builts because xcode10 and xcode11 have issues with building Qt not for the targetted IDEs SDK.
+        # These prebuilts are from hunter_cache built on jenkins with XCode10 on OSX 10.14. This version of Qt works on 10.15 fine.
+        # qt_5.11.3_osx10.14_prebuilt.tar.bz2   is   02209aee16a800a37a7705c38220e4c5326778fe.tar.bz2 from hunter
+        # qt_5.11.3_osx10.14_cmakeextras.tar.bz2   is   946f04a12348edc49e0bbbf6fe865c7e2c5cc35e.tar.bz2 from hunter
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_prebuilt.tar.bz2
+            COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_cmakeextras.tar.bz2
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
+            RESULT_VARIABLE error_code
+        )
+    else()
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.5.1-p9_33bf40008_ubuntu16.04_prebuilt.tar.bz2
+            COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.5.1-p9_c1a55303d_ubuntu16.04_cmakeextras.tar.bz2
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
+            RESULT_VARIABLE error_code
+        )
+    endif()
 
     if(error_code)
         message(FATAL_ERROR "Failed to extarct qt prebuilt")
@@ -44,7 +52,9 @@ endif()
 
 
 if (LINUX)
-    find_package(ZLIB REQUIRED)
+
+    hunter_add_package(ZLIB)
+    find_package(ZLIB CONFIG REQUIRED)
 
     if (NOT ZLIB_FOUND)
         message(FATAL_ERROR "zlib library not found")
