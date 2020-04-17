@@ -242,6 +242,9 @@ will end previously opened EASY_BLOCK or EASY_FUNCTION.
     if (!EASY_TOKEN_CONCATENATE(unique_profiler_thread_name, __LINE__))\
         EASY_TOKEN_CONCATENATE(unique_profiler_thread_name, __LINE__) = ::profiler::registerThread(name);
 
+# define EASY_END_THREAD \
+    ::profiler::unregisterThread();
+
 /** Macro for current thread registration and creating a thread guard object.
 
 \note If this thread has been already registered then nothing happens.
@@ -394,6 +397,7 @@ Otherwise, no log messages will be printed.
 # define EASY_MAIN_THREAD 
 # define EASY_SET_EVENT_TRACING_ENABLED(isEnabled) 
 # define EASY_SET_LOW_PRIORITY_EVENT_TRACING(isLowPriority) 
+# define EASY_END_THREAD
 
 # ifndef _WIN32
 #  define EASY_EVENT_TRACING_SET_LOG(filename) 
@@ -609,6 +613,16 @@ namespace profiler {
         \ingroup profiler
         */
         PROFILER_API const char* registerThread(const char* _name);
+
+        /** Unregister current thread.
+
+        \note Only first call of unregisterThread() for the current thread will have an effect. Has no effect if registerThread() has not previously been called.
+
+        \warning Do not use with registerThreadScoped().
+
+        \ingroup profiler
+        */
+        PROFILER_API void unregisterThread();
 
         /** Enable or disable event tracing.
 

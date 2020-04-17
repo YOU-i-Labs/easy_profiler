@@ -212,6 +212,11 @@ PROFILER_API const char* registerThread(const char* name)
     return ProfileManager::instance().registerThread(name);
 }
 
+PROFILER_API void unregisterThread()
+{
+    ProfileManager::instance().unregisterThread();
+}
+
 PROFILER_API void setEventTracingEnabled(bool _isEnable)
 {
     ProfileManager::instance().setEventTracingEnabled(_isEnable);
@@ -330,6 +335,7 @@ PROFILER_API void beginNonScopedBlock(const profiler::BaseBlockDescriptor*, cons
 PROFILER_API uint32_t dumpBlocksToFile(const char*) { return 0; }
 PROFILER_API const char* registerThreadScoped(const char*, profiler::ThreadGuard&) { return ""; }
 PROFILER_API const char* registerThread(const char*) { return ""; }
+PROFILER_API void unregisterThread() { }
 PROFILER_API void setEventTracingEnabled(bool) { }
 PROFILER_API bool isEventTracingEnabled() { return false; }
 PROFILER_API void setLowPriorityEventTracing(bool) { }

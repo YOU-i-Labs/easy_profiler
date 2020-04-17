@@ -1185,6 +1185,21 @@ void ProfileManager::registerThread()
 #endif
 }
 
+void ProfileManager::unregisterThread()
+{
+    // Only remove thread data if a capture is _not_ in progress.
+    if (THIS_THREAD && m_profilerStatus.load(std::memory_order_acquire) == false)
+    {
+        // There is no capture in progress. Remove the thread entry (even if it has data).
+        guard_lock_t lock(m_spin);
+        auto it = m_threads.find(getCurrentThreadId());
+        if (it != m_threads.end())
+        {
+            m_threads.erase(it);
+        }
+    }
+}
+
 const char* ProfileManager::registerThread(const char* name, profiler::ThreadGuard& threadGuard)
 {
     if (THIS_THREAD == nullptr)

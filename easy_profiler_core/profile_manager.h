@@ -163,6 +163,7 @@ public:
     uint32_t dumpBlocksToFile(const char* filename);
     const char* registerThread(const char* name, profiler::ThreadGuard& threadGuard);
     const char* registerThread(const char* name);
+    void unregisterThread();
 
     void setContextSwitchLogFilename(const char* name);
     const char* getContextSwitchLogFilename() const;
