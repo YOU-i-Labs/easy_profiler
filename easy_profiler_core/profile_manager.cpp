@@ -1197,6 +1197,7 @@ void ProfileManager::unregisterThread()
         {
             m_threads.erase(it);
         }
+        THIS_THREAD = nullptr;
     }
 }
 
