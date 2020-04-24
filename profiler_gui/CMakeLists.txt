@@ -32,6 +32,9 @@ if (EASY_PROFILER_GUI_WITH_PREBUILT_QT)
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
             RESULT_VARIABLE error_code
         )
+
+        find_package(Qt5DBus CONFIG REQUIRED PATHS ${CMAKE_BINARY_DIR}/qt5/lib/cmake/Qt5DBus)
+        find_package(ZLIB CONFIG REQUIRED PATHS ${CMAKE_BINARY_DIR}/qt5/lib/cmake/ZLIB)
     endif()
 
     if(error_code)
@@ -50,16 +53,12 @@ else()
 
     if (LINUX)
         hunter_add_package(ZLIB)
+        find_package(ZLIB CONFIG REQUIRED)
+        if (NOT ZLIB_FOUND)
+            message(FATAL_ERROR "zlib library not found")
+        endif()  
     endif()
 
-endif()
-
-if (LINUX)
-    find_package(ZLIB CONFIG REQUIRED)
-
-    if (NOT ZLIB_FOUND)
-        message(FATAL_ERROR "zlib library not found")
-    endif()
 endif()
 
 if (Qt5Widgets_FOUND)
