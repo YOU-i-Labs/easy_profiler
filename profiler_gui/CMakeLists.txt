@@ -6,7 +6,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 option(EASY_PROFILER_GUI_WITH_PREBUILT_QT "Use prebuilt Qt tarball to build the GUI" ON)
 
-if (EASY_PROFILER_GUI_WITH_PREBUILT_QT)
+if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND (OSX OR LINUX))
     
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/qt5
