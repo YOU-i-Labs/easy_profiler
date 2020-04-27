@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.0)
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/HunterGate.cmake)
 HunterGate(
-    URL "https://api.github.com/repos/You-i-Labs/Hunter/tarball/v0.21.10-youi-p3?access_token=$ENV{GITHUB_ACCESS_TOKEN}"
-    SHA1 "72645851d85509ecd5602231e5d4655b1c56d03d"
+    URL "https://api.github.com/repos/You-i-Labs/Hunter/tarball/v0.23.190-youi8"
+    HTTPHEADER "Authorization: token $ENV{GITHUB_ACCESS_TOKEN}"
+    SHA1 "7e51c57baac5c95ac9788ebc0781f1619853cb07"
+    FILEPATH "${CMAKE_CURRENT_LIST_DIR}/cmake/config.cmake"
 )
 
 project(easy_profiler CXX)
