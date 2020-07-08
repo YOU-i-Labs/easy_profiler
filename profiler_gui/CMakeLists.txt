@@ -6,7 +6,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 option(EASY_PROFILER_GUI_WITH_PREBUILT_QT "Use prebuilt Qt tarball to build the GUI" ON)
 
-if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND (OSX OR LINUX))
+if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND (OSX OR LINUX OR WIN32))
     
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/qt5
@@ -18,14 +18,21 @@ if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND (OSX OR LINUX))
         # These prebuilts are from hunter_cache built on jenkins with XCode10 on OSX 10.14. This version of Qt works on 10.15 fine.
         # qt_5.11.3_osx10.14_prebuilt.tar.bz2   is   02209aee16a800a37a7705c38220e4c5326778fe.tar.bz2 from hunter
         # qt_5.11.3_osx10.14_cmakeextras.tar.bz2   is   946f04a12348edc49e0bbbf6fe865c7e2c5cc35e.tar.bz2 from hunter
-
         execute_process(
             COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_prebuilt.tar.bz2
             COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_osx10.14_cmakeextras.tar.bz2
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
             RESULT_VARIABLE error_code
         )
-        
+    elseif(WIN32)
+        # This qt_..._prebuilt.zip is created by building easy_profiler with a clean hunter root and then zipping up 
+        # the entire hunter Install directory. Because on windows Qt is the only dependency then this becomes only 
+        # a pre-built Qt for this OS.
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.11.3_win64_prebuilt.tar.gz
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/qt5
+            RESULT_VARIABLE error_code
+        )
     else()
         execute_process(
             COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_SOURCE_DIR}/qt_5.5.1_linux18.04_prebuilt.tgz
@@ -38,7 +45,7 @@ if (EASY_PROFILER_GUI_WITH_PREBUILT_QT AND (OSX OR LINUX))
     endif()
 
     if(error_code)
-        message(FATAL_ERROR "Failed to extarct qt prebuilt")
+        message(FATAL_ERROR "Failed to extract qt prebuilt")
     endif()
 
     find_package(Qt5PrintSupport CONFIG REQUIRED PATHS ${CMAKE_BINARY_DIR}/qt5/lib/cmake/Qt5PrintSupport)
@@ -124,9 +131,9 @@ if (Qt5Widgets_FOUND)
     endif()
 
     target_link_libraries(profiler_gui PUBLIC Qt5::Widgets Qt5::PrintSupport Qt5::Core Qt5::Gui easy_profiler)
-    if (VS2017)
-        target_link_libraries(profiler_gui PUBLIC "${QT_ROOT}/lib/Qt5WindowsUIAutomationSupport.lib")
-    endif()
+    # if (VS2017)
+    #     target_link_libraries(profiler_gui PUBLIC "${QT_ROOT}/lib/Qt5WindowsUIAutomationSupport.lib")
+    # endif()
     if (WIN32)
         target_compile_definitions(profiler_gui PRIVATE -D_WIN32_WINNT=0x0600)
     endif ()

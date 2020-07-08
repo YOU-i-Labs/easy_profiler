@@ -47,6 +47,10 @@ endmacro()
 SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 
 add_subdirectory(easy_profiler_core)
+# If you want to build the GUI directly, this Release-prefix match fails and prevents the GUI from ever building on win32.
+# If this is the case, use the commented out if() statement below.
+#
+# if (NOT EASY_PROFILER_NO_GUI)
 if (NOT EASY_PROFILER_NO_GUI AND (NOT VS2017 OR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} MATCHES "Release-prefix"))
     # For VS2017, build only in release
     add_subdirectory(profiler_gui)
