@@ -131,7 +131,7 @@ if (Qt5Widgets_FOUND)
     endif()
 
     target_link_libraries(profiler_gui PUBLIC Qt5::Widgets Qt5::PrintSupport Qt5::Core Qt5::Gui easy_profiler)
-    # if (VS2017)
+    # if (WIN64)
     #     target_link_libraries(profiler_gui PUBLIC "${QT_ROOT}/lib/Qt5WindowsUIAutomationSupport.lib")
     # endif()
     if (WIN32)
