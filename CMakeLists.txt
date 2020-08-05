@@ -51,8 +51,8 @@ add_subdirectory(easy_profiler_core)
 # If this is the case, use the commented out if() statement below.
 #
 # if (NOT EASY_PROFILER_NO_GUI)
-if (NOT EASY_PROFILER_NO_GUI AND (NOT WIN64 OR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} MATCHES "Release-prefix"))
-    # For WIN64, build only in release
+if (NOT EASY_PROFILER_NO_GUI AND (NOT WIN32 OR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} MATCHES "Release-prefix"))
+    # For Windows, build only in release
     add_subdirectory(profiler_gui)
 endif()
 if (NOT EASY_PROFILER_NO_CONVERTER)
