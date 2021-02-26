@@ -12,7 +12,7 @@
 *                   : *
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -70,12 +70,15 @@
 namespace profiler_gui {
 
     const QString ORGANAZATION_NAME = "EasyProfiler";
+    const QString DEFAULT_WINDOW_TITLE = "EasyProfiler";
     const QString APPLICATION_NAME = "Easy profiler gui application";
 
     const QColor RULER_COLOR = QColor::fromRgba(0x40000000 | (::profiler::colors::RichBlue & 0x00ffffff));// 0x402020c0);
     const QColor RULER_COLOR2 = QColor::fromRgba(0x40000000 | (::profiler::colors::Dark & 0x00ffffff));// 0x40408040);
     const QColor TEXT_COLOR = QColor::fromRgb(0xff504040);
     const QColor SYSTEM_BORDER_COLOR = QColor::fromRgb(0xffc4c4c4);
+
+    EASY_CONSTEXPR QRgb BLOCK_BORDER_COLOR = profiler::colors::Grey600 & 0x00ffffff;
     EASY_CONSTEXPR QRgb SELECTED_THREAD_BACKGROUND = 0xffe0e060;
     EASY_CONSTEXPR QRgb SELECTED_THREAD_FOREGROUND = 0xffffffff - (SELECTED_THREAD_BACKGROUND & 0x00ffffff);
 
@@ -212,9 +215,12 @@ namespace profiler_gui {
         ::profiler::block_id_t         selected_block_id; ///< Current selected profiler block id
         uint32_t                                 version; ///< Opened file version (files may have different format)
 
+        uint32_t                          max_rows_count; ///< Maximum blocks count for the StatsTree widget for the full call-stack mode
+
         float                                 frame_time; ///< Expected frame time value in microseconds to be displayed at minimap on graphics scrollbar
         int                               blocks_spacing; ///< Minimum blocks spacing on diagram
         int                              blocks_size_min; ///< Minimum blocks size on diagram
+        int                   histogram_column_width_min; ///< Minimum column width on histogram when borders are enabled
         int                           blocks_narrow_size; ///< Width indicating narrow blocks
         int                              max_fps_history; ///< Max frames history displayed in FPS Monitor
         int                           fps_timer_interval; ///< Interval in milliseconds for sending network requests to the profiled application (used by FPS Monitor)
@@ -237,9 +243,10 @@ namespace profiler_gui {
         bool                          enable_zero_length; ///< Enable zero length blocks (if true, then such blocks will have width == 1 pixel on each scale)
         bool                add_zero_blocks_to_hierarchy; ///< Enable adding zero blocks into hierarchy tree
         bool                 draw_graphics_items_borders; ///< Draw borders for graphics blocks or not
+        bool                      draw_histogram_borders; ///< Draw borders for histogram columns or not
         bool                        hide_narrow_children; ///< Hide children for narrow graphics blocks (See blocks_narrow_size)
         bool                         hide_minsize_blocks; ///< Hide blocks which screen size is less than blocks_size_min
-        bool                 display_only_relevant_stats; ///< Display only relevant information in ProfTreeWidget (excludes min, max, average times if there are only 1 calls number)
+        bool                hide_stats_for_single_blocks; ///< Hide min, max, avg, median durations in stats tree if there is only 1 call for a block
         bool                collapse_items_on_tree_close; ///< Collapse all items which were displayed in the hierarchy tree after tree close/reset
         bool               all_items_expanded_by_default; ///< Expand all items after file is opened
         bool               only_current_thread_hierarchy; ///< Build hierarchy tree for current thread only
@@ -273,38 +280,38 @@ inline profiler::SerializedBlockDescriptor& easyDescriptor(profiler::block_id_t 
     return *EASY_GLOBALS.descriptors[i];
 }
 
-inline profiler::SerializedBlockDescriptor& easyDescriptor(const profiler::BlocksTree& _block) {
-    return easyDescriptor(_block.node->id());
+inline profiler::SerializedBlockDescriptor& easyDescriptor(const profiler::BlocksTree& block) {
+    return easyDescriptor(block.node->id());
 }
 
 EASY_FORCE_INLINE const profiler::BlocksTree& easyBlocksTree(profiler::block_index_t i) {
     return easyBlock(i).tree;
 }
 
-EASY_FORCE_INLINE const char* easyBlockName(const profiler::BlocksTree& _block) {
-    const char* name = _block.node->name();
-    return *name != 0 ? name : easyDescriptor(_block.node->id()).name();
+EASY_FORCE_INLINE const char* easyBlockName(const profiler::BlocksTree& block) {
+    const char* name = block.node->name();
+    return *name != 0 ? name : easyDescriptor(block.node->id()).name();
 }
 
-EASY_FORCE_INLINE const char* easyBlockName(const profiler::BlocksTree& _block, const profiler::SerializedBlockDescriptor& _desc) {
-    const char* name = _block.node->name();
-    return *name != 0 ? name : _desc.name();
+EASY_FORCE_INLINE const char* easyBlockName(const profiler::BlocksTree& block, const profiler::SerializedBlockDescriptor& desc) {
+    const char* name = block.node->name();
+    return *name != 0 ? name : desc.name();
 }
 
 EASY_FORCE_INLINE const char* easyBlockName(profiler::block_index_t i) {
     return easyBlockName(easyBlock(i).tree);
 }
 
-inline qreal sceneX(profiler::timestamp_t _time) {
-    return PROF_MICROSECONDS(qreal(_time - EASY_GLOBALS.begin_time));
+inline qreal sceneX(profiler::timestamp_t time) {
+    return PROF_MICROSECONDS(qreal(time - EASY_GLOBALS.begin_time));
 }
 
-inline QString imagePath(const QString& _resource) {
-    return QString(":/images/%1/%2").arg(EASY_GLOBALS.theme).arg(_resource);
+inline QString imagePath(const QString& resource_name) {
+    return QString(":/images/%1/%2").arg(EASY_GLOBALS.theme).arg(resource_name);
 }
 
-inline QString imagePath(const char* _resource) {
-    return QString(":/images/%1/%2").arg(EASY_GLOBALS.theme).arg(_resource);
+inline QString imagePath(const char* resource_name) {
+    return QString(":/images/%1/%2").arg(EASY_GLOBALS.theme).arg(resource_name);
 }
 
 inline QSize applicationIconsSize() {

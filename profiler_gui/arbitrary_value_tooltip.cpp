@@ -6,10 +6,10 @@
 * email             : v.s.zarubkin@gmail.com
 * ----------------- :
 * description       : The file contains implementation of ArbitraryValueToolTip which is used
-*                   : for displaying arbitrary value in Diagram and Hierarchy widgets.
+*                   : for displaying arbitrary value in Diagram and StatsTree widgets.
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -59,9 +59,16 @@
 #include "common_functions.h"
 #include "globals.h"
 
+const auto TOOLTIP_OPTIONS =
+#ifndef __APPLE__
+        Qt::Tool | Qt::SubWindow | Qt::FramelessWindowHint;
+#else
+        Qt::Tool | Qt::FramelessWindowHint;
+#endif
+
 ArbitraryValueToolTip::ArbitraryValueToolTip(const QString& _name
     , const profiler::BlocksTree& _block, QWidget* _parent)
-    : QWidget(_parent, Qt::Tool | Qt::SubWindow | Qt::FramelessWindowHint)
+    : QWidget(_parent, TOOLTIP_OPTIONS)
 {
     auto content = new QWidget();
     content->setObjectName("cnt");

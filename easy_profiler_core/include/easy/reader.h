@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -68,6 +68,7 @@ namespace profiler {
     struct BlockStatistics EASY_FINAL
     {
         profiler::timestamp_t          total_duration; ///< Total duration of all block calls
+        profiler::timestamp_t         median_duration; ///< Median duration of all block calls
         profiler::timestamp_t total_children_duration; ///< Total duration of all children of all block calls
         profiler::block_index_t    min_duration_block; ///< Will be used in GUI to jump to the block with min duration
         profiler::block_index_t    max_duration_block; ///< Will be used in GUI to jump to the block with max duration
@@ -76,6 +77,7 @@ namespace profiler {
 
         explicit BlockStatistics(profiler::timestamp_t _duration, profiler::block_index_t _block_index, profiler::block_index_t _parent_index)
             : total_duration(_duration)
+            , median_duration(0)
             , total_children_duration(0)
             , min_duration_block(_block_index)
             , max_duration_block(_block_index)

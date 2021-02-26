@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
 	* MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -360,10 +360,10 @@ int GraphicsSliderArea::margins() const
 
 //////////////////////////////////////////////////////////////////////////
 
-void GraphicsSliderArea::setValue(qreal _value)
+bool GraphicsSliderArea::setValue(qreal _value)
 {
     if (m_bUpdatingPos)
-        return;
+        return false;
 
     const profiler_gui::BoolFlagGuard guard(m_bUpdatingPos, true);
 
@@ -371,7 +371,7 @@ void GraphicsSliderArea::setValue(qreal _value)
     if (fabs(m_value - newValue) < 2 * std::numeric_limits<decltype(m_value)>::epsilon())
     {
         m_slider->setX(m_value + m_slider->halfwidth());
-        return;
+        return false;
     }
 
     m_value = newValue;
@@ -383,7 +383,13 @@ void GraphicsSliderArea::setValue(qreal _value)
     }
 
     if (m_imageItem->isVisible())
+    {
         m_imageItem->onValueChanged();
+        if (!m_slider->isVisible())
+            scene()->update();
+    }
+
+    return true;
 }
 
 void GraphicsSliderArea::setRange(qreal _minValue, qreal _maxValue)
@@ -413,7 +419,15 @@ void GraphicsSliderArea::setRange(qreal _minValue, qreal _maxValue)
 void GraphicsSliderArea::setSliderWidth(qreal _width)
 {
     m_slider->setWidth(_width);
-    setValue(m_value);
+    if (setValue(m_value))
+        return;
+
+    if (m_imageItem->isVisible())
+    {
+        m_imageItem->onValueChanged();
+        if (!m_slider->isVisible())
+            scene()->update();
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -474,8 +488,10 @@ void GraphicsSliderArea::mousePressEvent(QMouseEvent* _event)
         if (!_event->modifiers())
         {
             m_bBindMode = !m_bBindMode;
+            m_slider->setVisible(canShowSlider());
             if (m_imageItem->isVisible())
                 m_imageItem->onModeChanged();
+            scene()->update();
         }
     }
 

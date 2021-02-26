@@ -16,7 +16,7 @@
 *                   : * 2016/09/17 Victor Zarubkin: added log messages printing.
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -381,7 +381,7 @@ bool setPrivilege(HANDLE hToken, PTCHAR _privelegeName)
 
     EASY_LOG_ONLY(
         if (!success)
-            EASY_WARNING("Failed to set " << _privelegeName << " privelege for the application.\n");
+            EASY_WARNING("Failed to set " << _privelegeName << " privilege for the application.\n");
     )
 
     return success;
@@ -410,7 +410,7 @@ void EasyEventTracer::setProcessPrivileges()
     }
     EASY_LOG_ONLY(
         else {
-            EASY_WARNING("Failed to open process to adjust priveleges.\n");
+            EASY_WARNING("Failed to open process to adjust privileges.\n");
         }
     )
 }

@@ -12,7 +12,7 @@
 *                   : *
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -55,12 +55,19 @@
 #ifndef EASY_PROFILER_GUI_COMMON_FUNCTIONS_H
 #define EASY_PROFILER_GUI_COMMON_FUNCTIONS_H
 
-#include <QRgb>
-#include <QString>
-#include <QFont>
+#include <sstream>
 #include <stdlib.h>
 #include <type_traits>
+
+#include <QFont>
+#include <QRgb>
+#include <QString>
+#include <QStyle>
+#include <QWidget>
+
 #include "common_types.h"
+
+class QTreeWidgetItem;
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -192,6 +199,13 @@ QString timeStringIntNs(TimeUnits _units, ::profiler::timestamp_t _interval);
 
 //////////////////////////////////////////////////////////////////////////
 
+QString shortenCountString(uint64_t count, int precision = 1);
+QString shortenCountString(uint32_t count, int precision = 1);
+QString shortenCountString(int64_t count, int precision = 1);
+QString shortenCountString(int32_t count, int precision = 1);
+
+//////////////////////////////////////////////////////////////////////////
+
 inline double percentReal(::profiler::timestamp_t _partial, ::profiler::timestamp_t _total) {
     return _total != 0 ? 100. * static_cast<double>(_partial) / static_cast<double>(_total) : 0.;
 }
@@ -219,6 +233,31 @@ int valueArraySize(const ::profiler::ArbitraryValue& _serializedValue);
 double value2real(const ::profiler::ArbitraryValue& _serializedValue, int _index = 0);
 
 //////////////////////////////////////////////////////////////////////////
+
+template <class T>
+void updateProperty(QWidget* widget, const char* name, T&& property)
+{
+    widget->setProperty(name, std::forward<T>(property));
+    widget->style()->unpolish(widget);
+    widget->style()->polish(widget);
+
+    if (widget->isVisible())
+    {
+        widget->update();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////
+
+void deleteTreeItem(QTreeWidgetItem* item);
+
+///////////////////////////////////////////////////////////////////////
+
+profiler::timestamp_t calculateMedian(const DurationsCountMap& durations);
+
+///////////////////////////////////////////////////////////////////////
+
+void clear_stream(std::stringstream& _stream);
 
 } // END of namespace profiler_gui.
 

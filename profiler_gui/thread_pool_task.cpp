@@ -8,7 +8,7 @@
 * description       : The file contains implementation of ThreadPoolTask.
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -51,22 +51,33 @@
 #include "thread_pool_task.h"
 #include "thread_pool.h"
 
-ThreadPoolTask::ThreadPoolTask() : m_func([]{}), m_interrupt(nullptr)
+static std::atomic_bool s_dummy_flag {false};
+
+ThreadPoolTask::ThreadPoolTask(bool creatingQtObjects)
+    : m_func([] {})
+    , m_interrupt(&s_dummy_flag)
+    , m_creatingQtObjects(creatingQtObjects)
 {
     m_status = static_cast<int8_t>(TaskStatus::Finished);
 }
 
 ThreadPoolTask::~ThreadPoolTask()
 {
+    m_signals.disconnect();
     dequeue();
 }
 
-void ThreadPoolTask::enqueue(std::function<void()>&& func, std::atomic_bool& interruptFlag)
+bool ThreadPoolTask::creatingQtObjects() const
+{
+    return m_creatingQtObjects;
+}
+
+void ThreadPoolTask::enqueue(Func&& func, std::atomic_bool& interruptFlag)
 {
     dequeue();
     setStatus(TaskStatus::Enqueued);
 
-    m_interrupt = & interruptFlag;
+    m_interrupt = &interruptFlag;
     m_interrupt->store(false, std::memory_order_release);
     m_func = std::move(func);
 
@@ -75,19 +86,22 @@ void ThreadPoolTask::enqueue(std::function<void()>&& func, std::atomic_bool& int
 
 void ThreadPoolTask::dequeue()
 {
-    if (m_interrupt == nullptr || status() == TaskStatus::Finished)
+    if (m_interrupt == nullptr || m_interrupt == &s_dummy_flag || status() == TaskStatus::Finished)
+    {
         return;
+    }
 
     m_interrupt->store(true, std::memory_order_release);
 
     ThreadPool::instance().dequeue(*this);
 
     // wait for finish
-    m_mutex.lock();
-    setStatus(TaskStatus::Finished);
-    m_mutex.unlock();
+    {
+        const std::lock_guard<std::mutex> guard(m_mutex);
+        setStatus(TaskStatus::Finished);
+    }
 
-    m_interrupt->store(false, std::memory_order_release);
+    //m_interrupt->store(false, std::memory_order_release);
 }
 
 TaskStatus ThreadPoolTask::status() const
@@ -95,18 +109,31 @@ TaskStatus ThreadPoolTask::status() const
     return static_cast<TaskStatus>(m_status.load(std::memory_order_acquire));
 }
 
-void ThreadPoolTask::execute()
+void ThreadPoolTask::operator()()
 {
-    const std::lock_guard<std::mutex> guard(m_mutex);
+    // execute if not cancelled
+    {
+        const std::lock_guard<std::mutex> guard(m_mutex);
 
-    if (status() == TaskStatus::Finished || m_interrupt->load(std::memory_order_acquire))
-        return;
+        if (status() == TaskStatus::Finished || m_interrupt->load(std::memory_order_acquire))
+        {
+            // cancelled
+            return;
+        }
 
-    m_func();
-    setStatus(TaskStatus::Finished);
+        m_func();
+        setStatus(TaskStatus::Finished);
+    }
+
+    emit m_signals.finished();
 }
 
 void ThreadPoolTask::setStatus(TaskStatus status)
 {
     m_status.store(static_cast<int8_t>(status), std::memory_order_release);
+}
+
+ThreadPoolTaskSignals& ThreadPoolTask::events()
+{
+    return m_signals;
 }

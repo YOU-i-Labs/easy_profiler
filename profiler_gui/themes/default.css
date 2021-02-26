@@ -6,8 +6,29 @@
 *  default.scss by pysassc tool   *
 *                                 *
 ***********************************/
+/**************************************************************************
+* Legend                                                                  *
+*                                                                         *
+* ex - 'pt' analog for widgets. It is converted to 'px' on program start. *
+*      Example: '10ex' will be converted to '21px'.                       *
+*                                                                         *
+* qex - same as 'ex' but with removed 'px' in resulting text.             *
+*       It is used for 'qproperty' properties.                            *
+*       Example: '10qex' will be converted to '21'.                       *
+*                                                                         *
+* OS dependent properties:                                                *
+*                                                                         *
+*   {lin}font-weight: bold;                                               *
+*   {win}height: 12ex;                                                    *
+*   {osx}backgound: transparent;                                          *
+*                                                                         *
+*   Such properties will be uncommented on program start for specified OS *
+*                                                                         *
+***************************************************************************/
 * {
-  font-family: "DejaVu Sans";
+  /*{lin}font-family: "DejaVu Sans";*/
+  /*{win}font-family: "DejaVu Sans";*/
+  /*{osx}font-family: "Menlo";*/
   font-size: 10pt;
   color: #504040; }
 
@@ -17,9 +38,54 @@
 RoundProgressIndicator {
   qproperty-color: #3297FD;
   qproperty-background: #c4c4c4;
+  qproperty-indicatorWidth: 2qex;
   background: transparent; }
 
+RoundProgressDialog {
+  qproperty-background: rgba(255, 255, 255, 0.7);
+  qproperty-borderRadius: 10qex; }
+
+RoundProgressDialog#LoadProgress {
+  qproperty-background: rgba(0, 0, 0, 0.5); }
+  RoundProgressDialog#LoadProgress RoundProgressWidget RoundProgressIndicator {
+    qproperty-buttonColor: white;
+    qproperty-buttonStyle: cross;
+    qproperty-buttonRole: reject;
+    qproperty-buttonSize: 0.4;
+    qproperty-crossWidth: 1;
+    color: white; }
+  RoundProgressDialog#LoadProgress RoundProgressWidget RoundProgressIndicator[pressed=true] {
+    qproperty-buttonColor: red; }
+  RoundProgressDialog#LoadProgress RoundProgressWidget QLabel {
+    color: white; }
+
+RoundProgressDialog#CaptureProgress, RoundProgressDialog#ReceiveProgress {
+  qproperty-background: rgba(0, 0, 0, 0.5); }
+  RoundProgressDialog#CaptureProgress RoundProgressWidget RoundProgressIndicator, RoundProgressDialog#ReceiveProgress RoundProgressWidget RoundProgressIndicator {
+    qproperty-style: infinite;
+    qproperty-buttonColor: red;
+    qproperty-buttonStyle: stop;
+    qproperty-buttonRole: accept;
+    qproperty-buttonSize: 0.35;
+    color: white; }
+  RoundProgressDialog#CaptureProgress RoundProgressWidget RoundProgressIndicator[pressed=true], RoundProgressDialog#ReceiveProgress RoundProgressWidget RoundProgressIndicator[pressed=true] {
+    qproperty-buttonColor: darkRed; }
+  RoundProgressDialog#CaptureProgress RoundProgressWidget QLabel, RoundProgressDialog#ReceiveProgress RoundProgressWidget QLabel {
+    color: white; }
+
+RoundProgressDialog#ReceiveProgress RoundProgressWidget RoundProgressIndicator {
+  qproperty-buttonColor: white;
+  qproperty-buttonStyle: cross;
+  qproperty-buttonRole: reject;
+  qproperty-buttonSize: 0.4;
+  qproperty-crossWidth: 1; }
+
+RoundProgressDialog#ReceiveProgress RoundProgressWidget RoundProgressIndicator[pressed=true] {
+  qproperty-buttonColor: red; }
+
 MainWindow, QToolBar, QDialog {
+  border-style: solid;
+  border-color: white;
   background-color: white; }
 
 QToolTip {
@@ -33,14 +99,14 @@ ArbitraryValueToolTip {
   background-color: #ffeccc; }
   ArbitraryValueToolTip QWidget#cnt {
     border: 1px solid #c4c4c4;
-    background-color: transparent;
+    background: transparent;
     margin: 0; }
   ArbitraryValueToolTip QLabel {
-    background-color: transparent;
+    background: transparent;
     border: none;
     color: #504040; }
   ArbitraryValueToolTip QTextEdit {
-    background-color: transparent;
+    background: transparent;
     border: none;
     color: #504040;
     selection-color: white;
@@ -54,7 +120,8 @@ QLabel#BookmarkPopup {
   padding: 4ex; }
 
 QGraphicsView {
-  border: 1px solid #c4c4c4; }
+  border: 1px solid #c4c4c4;
+  background-color: white; }
 
 QSplitter::handle:hover {
   background-color: #3297FD; }
@@ -64,7 +131,10 @@ QSplitter::handle:pressed {
 
 QLabel#BlocksTreeWidget_HintLabel {
   color: gray;
-  font-size: 13pt; }
+  font-size: 12pt; }
+
+QLabel#BlocksTreeWidget_HintLabel[hovered=true] {
+  color: black; }
 
 /* ****************************************************************************************************************** */
 QLineEdit, QSpinBox {
@@ -97,6 +167,9 @@ QComboBox::drop-down {
   subcontrol-position: center right;
   border: none;
   width: 10ex; }
+
+QTextEdit {
+  background-color: white; }
 
 QComboBox::down-arrow {
   image: url(":/images/default/arrow-down");
@@ -177,6 +250,7 @@ QListView {
   border: 1px solid #c4c4c4; }
 
 QListView, QTableView, QTreeView {
+  background-color: white;
   alternate-background-color: #e4e4ec;
   selection-background-color: #B4D5FE;
   selection-color: #504040; }
@@ -207,7 +281,7 @@ QListView::item:selected, QTableView::item:selected, QTreeView::item:selected {
 QTreeView::indicator {
   width: 9ex;
   height: 9ex;
-  background-color: transparent;
+  background: transparent;
   border: 1px solid transparent;
   padding: 1px;
   margin: 0; }
@@ -245,7 +319,7 @@ QMenu {
 QMenu::item {
   height: 15ex;
   padding-left: 17ex;
-  padding-right: 5ex;
+  padding-right: 10ex;
   border: 1px solid transparent;
   /* reserve space for selection border */ }
 
@@ -302,17 +376,19 @@ QMenu::indicator:exclusive:checked:disabled {
 
 /* ****************************************************************************************************************** */
 QHeaderView::section {
-  height: 15.3ex;
-  width: 60ex;
-  min-width: 40ex;
-  background: #eeeeee; }
+  height: 15ex;
+  min-height: 15ex;
+  max-height: 15ex;
+  background: #eeeeee;
+  /*{lin}font-weight: bold;*/ }
 
 /* ****************************************************************************************************************** */
 DockWidget QWidget#EasyDockWidgetTitle {
   background-color: #686464; }
   DockWidget QWidget#EasyDockWidgetTitle QLabel {
     color: white;
-    margin-left: 4px; }
+    margin-left: 4px;
+    background: transparent; }
   DockWidget QWidget#EasyDockWidgetTitle QPushButton {
     background: none;
     border: none;
@@ -355,7 +431,7 @@ QProgressBar::chunk {
 
 /* ****************************************************************************************************************** */
 QScrollBar {
-  background-color: transparent;
+  background: transparent;
   border: none;
   padding: 0; }
 
@@ -399,9 +475,9 @@ QScrollBar::add-line, QScrollBar::sub-line {
 
 WindowHeader {
   background-color: white;
-  height: 24ex;
-  min-height: 24ex;
-  max-height: 24ex;
+  height: 15.6ex;
+  min-height: 15.6ex;
+  max-height: 15.6ex;
   margin: 0;
   padding: 0 0 0 6ex;
   border: none; }
@@ -426,8 +502,8 @@ WindowHeader {
     image: url(":/images/default/minimize");
     padding: 2ex; }
   WindowHeader QPushButton#WindowHeader_MinButton:hover {
-    background-color: #d1d1d1;
-    border-bottom: 1px solid #d1d1d1; }
+    background-color: #e8e8e8;
+    border-bottom: 1px solid #e8e8e8; }
   WindowHeader QPushButton#WindowHeader_MinButton:pressed {
     background-color: #c4c4c4;
     border-bottom: 1px solid #c4c4c4; }
@@ -438,8 +514,8 @@ WindowHeader {
     image: url(":/images/default/to-window");
     padding: 1ex; }
   WindowHeader QPushButton#WindowHeader_MaxButton:hover {
-    background-color: #d1d1d1;
-    border-bottom: 1px solid #d1d1d1; }
+    background-color: #e8e8e8;
+    border-bottom: 1px solid #e8e8e8; }
   WindowHeader QPushButton#WindowHeader_MaxButton:pressed {
     background-color: #c4c4c4;
     border-bottom: 1px solid #c4c4c4; }
@@ -452,7 +528,8 @@ BookmarkEditor {
   border: 1px solid #c4c4c4; }
   BookmarkEditor QWidget#BookmarkEditor_ColorBox {
     margin: 0;
-    padding: 0; }
+    padding: 0;
+    background: transparent; }
     BookmarkEditor QWidget#BookmarkEditor_ColorBox QPushButton#BookmarkEditor_ColorButton {
       min-width: 15ex;
       max-width: 15ex;

@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -50,6 +50,10 @@ The Apache License, Version 2.0 (the "License");
 #elif defined(__APPLE__) 
 # include <pthread.h>
 # include <Availability.h>
+#elif defined(__QNX__)
+# include <sys/mman.h>
+# include <process.h>
+# define __NR_gettid SYS_gettid
 #elif defined(__ORBIS__)
 # include <pthread.h>
 #else
@@ -80,6 +84,9 @@ inline profiler::thread_id_t getCurrentThreadId()
 #   else
     return (profiler::thread_id_t)pthread_self();
 #   endif
+#elif defined(__QNX__)
+    EASY_THREAD_LOCAL static const profiler::thread_id_t _id = (profiler::thread_id_t)gettid();
+    return _id;
 #else
     EASY_THREAD_LOCAL static const profiler::thread_id_t _id = (profiler::thread_id_t)syscall(__NR_gettid);
     return _id;

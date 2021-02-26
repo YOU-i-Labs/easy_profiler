@@ -69,6 +69,7 @@ else()
 endif()
 
 if (Qt5Widgets_FOUND)
+    message(STATUS "Using Qt v${Qt5Widgets_VERSION}")
     if (NOT("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") AND WIN32)
         set(APPLICATION_PLATFORM WIN32)
     endif ()
@@ -91,6 +92,8 @@ if (Qt5Widgets_FOUND)
         descriptors_tree_widget.cpp
         dialog.h
         dialog.cpp
+        file_reader.h
+        file_reader.cpp
         fps_widget.h
         fps_widget.cpp
         globals.h
@@ -110,6 +113,10 @@ if (Qt5Widgets_FOUND)
         main_window.cpp
         round_progress_widget.h
         round_progress_widget.cpp
+        socket_listener.h
+        socket_listener.cpp
+        text_highlighter.h
+        text_highlighter.cpp
         timer.h
         timer.cpp
         thread_pool.h

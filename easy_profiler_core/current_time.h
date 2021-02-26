@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -71,6 +71,9 @@ The Apache License, Version 2.0 (the "License");
 #  include <sys/time.h>
 # endif//__ARM_ARCH
 #endif
+# ifdef __mips__
+#  include <sys/time.h>
+# endif//__mips__
 
 namespace profiler { namespace clock {
 
@@ -116,13 +119,13 @@ static inline profiler::timestamp_t now()
       int64_t itc;
       asm("mov %0 = ar.itc" : "=r"(itc));
       return itc;
-    #elif defined(COMPILER_MSVC) && defined(_M_IX86)
+    #elif defined(_MSC_VER) && defined(_M_IX86)
       // Older MSVC compilers (like 7.x) don't seem to support the
       // __rdtsc intrinsic properly, so I prefer to use _asm instead
       // when I know it will work.  Otherwise, I'll use __rdtsc and hope
       // the code is being compiled with a non-ancient compiler.
       _asm rdtsc
-    #elif defined(COMPILER_MSVC)
+    #elif defined(_MSC_VER)
       return __rdtsc();
     #elif defined(__aarch64__)
       // System timer of ARMv8 runs at a different frequency than the CPU's.

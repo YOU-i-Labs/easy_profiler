@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -43,8 +43,12 @@ The Apache License, Version 2.0 (the "License");
 #ifndef EASY_PROFILER_ARBITRARY_VALUE_AUX_H
 #define EASY_PROFILER_ARBITRARY_VALUE_AUX_H
 
-#include <easy/details/easy_compiler_support.h>
 #include <stdint.h>
+#include <type_traits>
+
+#include <easy/details/easy_compiler_support.h>
+
+struct ThreadStorage;
 
 namespace profiler
 {

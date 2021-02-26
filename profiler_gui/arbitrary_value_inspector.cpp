@@ -12,7 +12,7 @@
 *                   : *
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -709,9 +709,23 @@ void ArbitraryValuesChartItem::paint(QPainter* _painter, const QStyleOptionGraph
         drawImage();
     }
 
-    QRectF rect(0, m_boundingRect.top() - widget->margin(), width - 3, m_boundingRect.height() + widget->margins());
-    _painter->setPen(profiler_gui::TEXT_COLOR);
-    _painter->drawText(rect, Qt::AlignLeft | Qt::AlignTop, bindMode ? " Mode: Zoom" : " Mode: Overview");
+    // MODE
+    {
+        QRectF rect(3, m_boundingRect.top() - widget->margin(), width - 3, m_boundingRect.height() + widget->margins());
+        QRectF textBounds;
+
+        _painter->setPen(Qt::blue);
+        _painter->drawText(
+            rect,
+            Qt::AlignLeft | Qt::AlignTop | Qt::TextDontClip | Qt::TextIncludeTrailingSpaces,
+            QStringLiteral("MODE: "),
+            &textBounds
+        );
+        rect.adjust(textBounds.width(), 0, 0, 0);
+
+        _painter->setPen(profiler_gui::TEXT_COLOR);
+        _painter->drawText(rect, Qt::AlignLeft | Qt::AlignTop | Qt::TextDontClip, bindMode ? "Zoom" : "Overview");
+    }
 
     _painter->setPen(Qt::darkGray);
     _painter->drawLine(QLineF(0, bottom, width, bottom));
@@ -1121,7 +1135,7 @@ void ArbitraryValuesChartItem::updateRegularImageAsync(QRectF _boundingRect, qre
         {
             auto color = profiler_gui::darken(c.color, 0.65f);
             if (profiler_gui::alpha(color) < 0xc0)
-                p.setPen(QColor::fromRgba(profiler::colors::modify_alpha32(0xc0000000, color)));
+                p.setPen(QColor::fromRgba(profiler::colors::modify_alpha32(color, 0xc0000000)));
             else
                 p.setPen(QColor::fromRgba(color));
             p.setBrush(QColor::fromRgba(0xc8ffffff));
@@ -1456,7 +1470,7 @@ void ArbitraryValuesChartItem::updateComplexityImageAsync(QRectF _boundingRect, 
 
             auto color = profiler_gui::darken(c.color, 0.65f);
             if (profiler_gui::alpha(color) < 0xc0)
-                p.setPen(QColor::fromRgba(profiler::colors::modify_alpha32(0xc0000000, color)));
+                p.setPen(QColor::fromRgba(profiler::colors::modify_alpha32(color, 0xc0000000)));
             else
                 p.setPen(QColor::fromRgba(color));
             p.setBrush(QColor::fromRgba(0xc8ffffff));
@@ -1546,12 +1560,14 @@ void ArbitraryValuesChartItem::clear()
     m_collections.clear();
     m_minValue = m_maxValue = 0;
     m_minDuration = m_maxDuration = 0;
+    setEmpty(true);
 }
 
 void ArbitraryValuesChartItem::update(Collections _collections)
 {
     cancelImageUpdate();
     m_collections = std::move(_collections);
+    setEmpty(m_collections.empty());
     updateImage();
 }
 
@@ -1703,10 +1719,10 @@ int GraphicsChart::filterWindowSize() const
     return m_chartItem->filterWindowSize();
 }
 
-//bool GraphicsChart::canShowSlider() const
-//{
-//    return chartType() != ChartType::Complexity && !m_bBindMode;
-//}
+bool GraphicsChart::canShowSlider() const
+{
+    return chartType() != ChartType::Complexity && !bindMode();
+}
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -1866,6 +1882,7 @@ ArbitraryValuesWidget::ArbitraryValuesWidget(bool _isMainWidget, profiler::threa
     , m_threadId(_threadId)
     , m_blockIndex(_blockIndex)
     , m_blockId(_blockId)
+    , m_bInitialized(false)
     , m_bMainWidget(_isMainWidget)
 {
     m_collectionsTimer.setInterval(100);
@@ -1903,12 +1920,12 @@ ArbitraryValuesWidget::ArbitraryValuesWidget(bool _isMainWidget, profiler::threa
     auto actionGroup = new QActionGroup(this);
     actionGroup->setExclusive(true);
 
-    auto actionRegulatChart = new QAction(QIcon(imagePath("yx-chart")), tr("Regular chart"), actionGroup);
+    auto actionRegulatChart = new QAction(QIcon(imagePath("yx-chart")), tr("Regular chart [ v(t) ]"), actionGroup);
     actionRegulatChart->setCheckable(true);
     actionRegulatChart->setChecked(true);
     tb->addAction(actionRegulatChart);
 
-    auto actionComplexityChart = new QAction(QIcon(imagePath("big-o-chart")), tr("Complexity chart"), actionGroup);
+    auto actionComplexityChart = new QAction(QIcon(imagePath("big-o-chart")), tr("Complexity chart [ t(v) ]"), actionGroup);
     actionComplexityChart->setCheckable(true);
     tb->addAction(actionComplexityChart);
 
@@ -1950,6 +1967,8 @@ ArbitraryValuesWidget::ArbitraryValuesWidget(bool _isMainWidget, profiler::threa
     connect(globalEvents, &GlobalSignals::selectedBlockIdChanged, this, &This::onSelectedBlockIdChanged);
     connect(globalEvents, &GlobalSignals::allDataGoingToBeDeleted, this, &This::clear);
 
+    connect(m_treeWidget->header(), &QHeaderView::sectionResized, this, &This::onHeaderSectionResized);
+
     if (_isMainWidget)
     {
         connect(m_treeWidget, &QTreeWidget::itemDoubleClicked, this, &This::onItemDoubleClicked);
@@ -1987,6 +2006,69 @@ ArbitraryValuesWidget::ArbitraryValuesWidget(QWidget* _parent)
     : ArbitraryValuesWidget(true, EASY_GLOBALS.selected_thread, EASY_GLOBALS.selected_block, EASY_GLOBALS.selected_block_id, _parent)
 {
     m_exportToCsvAction->setEnabled(false);
+}
+
+void ArbitraryValuesWidget::showEvent(QShowEvent* event)
+{
+    Parent::showEvent(event);
+
+    if (!m_bInitialized)
+    {
+        m_columnsMinimumWidth.resize(static_cast<size_t>(ArbitraryColumns::Count), 0);
+
+#if !defined(_WIN32) && !defined(__APPLE__)
+        const auto padding = px(9);
+#else
+        const auto padding = px(6);
+#endif
+
+        auto header = m_treeWidget->header();
+        auto headerItem = m_treeWidget->headerItem();
+
+        auto f = header->font();
+#if !defined(_WIN32) && !defined(__APPLE__)
+        f.setBold(true);
+#endif
+        QFontMetrics fm(f);
+
+        const auto indicatorSize = header->isSortIndicatorShown() ? px(11) : 0;
+        for (int i = 0; i < static_cast<int>(m_columnsMinimumWidth.size()); ++i)
+        {
+            auto minSize = static_cast<int>(fm.width(headerItem->text(i)) * profiler_gui::FONT_METRICS_FACTOR + padding);
+            m_columnsMinimumWidth[i] = minSize;
+
+            if (header->isSortIndicatorShown() && header->sortIndicatorSection() == i)
+            {
+                minSize += indicatorSize;
+            }
+
+            if (header->sectionSize(i) < minSize)
+            {
+                header->resizeSection(i, minSize);
+            }
+        }
+
+        m_bInitialized = true;
+    }
+}
+
+void ArbitraryValuesWidget::onHeaderSectionResized(int logicalIndex, int /*oldSize*/, int newSize)
+{
+    if (logicalIndex >= m_columnsMinimumWidth.size())
+    {
+        return;
+    }
+
+    auto header = m_treeWidget->header();
+    const auto indicatorSize = header->isSortIndicatorShown() && header->sortIndicatorSection() == logicalIndex ? px(11) : 0;
+    const auto minSize = m_columnsMinimumWidth[logicalIndex] + indicatorSize;
+
+    if (!m_bInitialized || newSize >= minSize)
+    {
+        return;
+    }
+
+    header->resizeSection(logicalIndex, minSize);
 }
 
 ArbitraryTreeWidgetItem* findSimilarItem(QTreeWidgetItem* _parentItem, ArbitraryTreeWidgetItem* _item)
@@ -2583,12 +2665,7 @@ void ArbitraryValuesWidget::onOpenInNewWindowClicked(bool)
 
     auto viewer = new ArbitraryValuesWidget(m_checkedItems, m_treeWidget->currentItem(), m_threadId, m_blockIndex, m_blockId);
 
-#ifdef WIN32
-    const WindowHeader::Buttons buttons = WindowHeader::AllButtons;
-#else
-    const WindowHeader::Buttons buttons {WindowHeader::MaximizeButton | WindowHeader::CloseButton};
-#endif
-    auto dialog = new Dialog(nullptr, "EasyProfiler", viewer, buttons, QMessageBox::NoButton);
+    auto dialog = new Dialog(nullptr, "EasyProfiler", viewer, WindowHeader::AllButtons, QMessageBox::NoButton);
     dialog->setProperty("stayVisible", true);
     dialog->setAttribute(Qt::WA_DeleteOnClose, true);
     connect(&EASY_GLOBALS.events, &profiler_gui::GlobalSignals::allDataGoingToBeDeleted, dialog, &QDialog::reject);

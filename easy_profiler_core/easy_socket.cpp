@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
 * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -47,6 +47,9 @@ limitations under the License.
 #include <string.h>
 #include <thread>
 #include <limits>
+#if defined(__QNX__)
+# include <sys/time.h>
+#endif
 
 #if defined(_WIN32)
 # pragma comment (lib, "Ws2_32.lib")
@@ -136,8 +139,10 @@ void EasySocket::flush()
     if (m_socket)
         closeSocket(m_socket);
 
-    if (m_replySocket != m_socket)
+    if (m_replySocket != m_socket && m_replySocket != 0) {
+        // we do not need to close uninitialized reply socket
         closeSocket(m_replySocket);
+    }
 
 #if defined(_WIN32)
     m_socket = 0;
@@ -170,6 +175,9 @@ void EasySocket::checkResult(int result)
 #if !defined(_WIN32)
             case SOCK_BROKEN_PIPE:
             case SOCK_ENOENT:
+#endif
+#if defined (__APPLE__)
+            case ECONNREFUSED:
 #endif
                 m_state = ConnectionState::Disconnected;
                 break;

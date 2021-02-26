@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -197,6 +197,8 @@ namespace profiler {
         ~ThreadGuard();
 
     }; // END of class ThreadGuard.
+
+    EASY_CONSTEXPR uint16_t MAX_BLOCK_DATA_SIZE = 2048 + 512 + 256; ///< Estimated maximum size of block dynamic name or EASY_VALUE data size
 
 } // END of namespace profiler.
 

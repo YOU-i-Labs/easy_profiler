@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -45,6 +45,7 @@ The Apache License, Version 2.0 (the "License");
 
 #include <easy/details/arbitrary_value_aux.h>
 #include <easy/details/profiler_public_types.h>
+#include <string>
 #include <string.h>
 
 namespace profiler

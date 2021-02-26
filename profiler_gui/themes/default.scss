@@ -11,6 +11,26 @@
     @return fade_out($color, 1.0 - $opacity);
 }
 
+/**************************************************************************
+* Legend                                                                  *
+*                                                                         *
+* ex - 'pt' analog for widgets. It is converted to 'px' on program start. *
+*      Example: '10ex' will be converted to '21px'.                       *
+*                                                                         *
+* qex - same as 'ex' but with removed 'px' in resulting text.             *
+*       It is used for 'qproperty' properties.                            *
+*       Example: '10qex' will be converted to '21'.                       *
+*                                                                         *
+* OS dependent properties:                                                *
+*                                                                         *
+*   {lin}font-weight: bold;                                               *
+*   {win}height: 12ex;                                                    *
+*   {osx}backgound: transparent;                                          *
+*                                                                         *
+*   Such properties will be uncommented on program start for specified OS *
+*                                                                         *
+***************************************************************************/
+
 // CONSTANTS ----------------------------------------------
 $FontSize: 10pt;
 
@@ -40,15 +60,18 @@ $IndicatorBorderColor: darken($DarkSelectionColor, 5%);
 $DisabledIndicatorBackgroundColor: $SelectionColor;
 $DisabledIndicatorBorderColor: darken($SelectionColor, 5%);
 
-$FocusBorderColor: $DarkSelectionColor;//#ffbcbc;
+$FocusBorderColor: $DarkSelectionColor; // #ffbcbc;
 $TooltipColor: #ffeccc;
 
 $InputHeight: 15ex;
-$WindowHeaderSize: 24ex;
+$WindowHeaderSize: 15.6ex;
+$WindowHeaderHoverColor: lighten($BorderColor, 14%); // #e8e8e8
 
 // STYLES -------------------------------------------------
 * {
-    font-family: "DejaVu Sans";
+    /*{lin}font-family: "DejaVu Sans";*/
+    /*{win}font-family: "DejaVu Sans";*/
+    /*{osx}font-family: "Menlo";*/
     font-size: $FontSize;
     color: $TextColor;
 }
@@ -60,10 +83,72 @@ $WindowHeaderSize: 24ex;
 RoundProgressIndicator {
     qproperty-color: $DarkSelectionColor;
     qproperty-background: $BorderColor;
+    qproperty-indicatorWidth: 2qex;
     background: transparent;
 }
 
+RoundProgressDialog {
+    qproperty-background: rgb_a(#ffffff, 0.7);
+    qproperty-borderRadius: 10qex;
+}
+
+RoundProgressDialog#LoadProgress {
+    qproperty-background: rgb_a(#000000, 0.5);
+
+    RoundProgressWidget {
+        RoundProgressIndicator {
+            qproperty-buttonColor: white;
+            qproperty-buttonStyle: cross;
+            qproperty-buttonRole: reject;
+            qproperty-buttonSize: 0.4;
+            qproperty-crossWidth: 1;
+            color: white;
+        }
+        RoundProgressIndicator[pressed=true] {
+            qproperty-buttonColor: red;
+        }
+        QLabel {
+            color: white;
+        }
+    }
+}
+
+RoundProgressDialog#CaptureProgress, RoundProgressDialog#ReceiveProgress {
+    qproperty-background: rgb_a(#000000, 0.5);
+
+    RoundProgressWidget {
+        RoundProgressIndicator {
+            qproperty-style: infinite;
+            qproperty-buttonColor: red;
+            qproperty-buttonStyle: stop;
+            qproperty-buttonRole: accept;
+            qproperty-buttonSize: 0.35;
+            color: white;
+        }
+        RoundProgressIndicator[pressed=true] {
+            qproperty-buttonColor: darkRed;
+        }
+        QLabel {
+            color: white;
+        }
+    }
+}
+
+RoundProgressDialog#ReceiveProgress RoundProgressWidget RoundProgressIndicator {
+    qproperty-buttonColor: white;
+    qproperty-buttonStyle: cross;
+    qproperty-buttonRole: reject;
+    qproperty-buttonSize: 0.4;
+    qproperty-crossWidth: 1;
+}
+
+RoundProgressDialog#ReceiveProgress RoundProgressWidget RoundProgressIndicator[pressed=true] {
+    qproperty-buttonColor: red;
+}
+
 MainWindow, QToolBar, QDialog {
+    border-style: solid;
+    border-color: $BackgroundColor;
     background-color: $BackgroundColor;
 }
 
@@ -80,18 +165,18 @@ ArbitraryValueToolTip {
 
     QWidget#cnt {
         border: 1px solid $BorderColor;
-        background-color: transparent;
+        background: transparent;
         margin: 0;
     }
 
     QLabel {
-        background-color: transparent;
+        background: transparent;
         border: none;
         color: $TextColor;
     }
 
     QTextEdit {
-        background-color: transparent;
+        background: transparent;
         border: none;
         color: $TextColor;
         selection-color: $DarkSelectedTextColor;
@@ -110,6 +195,7 @@ QLabel#BookmarkPopup {
 
 QGraphicsView {
     border: 1px solid $BorderColor;
+    background-color: $BackgroundColor;
 }
 
 QSplitter::handle:hover {
@@ -122,7 +208,11 @@ QSplitter::handle:pressed {
 
 QLabel#BlocksTreeWidget_HintLabel {
     color: gray;
-    font-size: 13pt;
+    font-size: 12pt;
+}
+
+QLabel#BlocksTreeWidget_HintLabel[hovered=true] {
+    color: black;
 }
 
 /* ****************************************************************************************************************** */
@@ -158,6 +248,10 @@ QComboBox::drop-down {
     subcontrol-position: center right;
     border: none;
     width: 10ex;
+}
+
+QTextEdit {
+    background-color: $BackgroundColor;
 }
 
 QComboBox::down-arrow {
@@ -257,6 +351,7 @@ QListView {
 }
 
 QListView, QTableView, QTreeView {
+    background-color: $BackgroundColor;
     alternate-background-color: #e4e4ec;
     selection-background-color: $TreeViewSelectionColor;
     selection-color: $TreeViewSelectionTextColor;
@@ -295,7 +390,7 @@ QListView::item:selected, QTableView::item:selected, QTreeView::item:selected {
 QTreeView::indicator {
     width: 9ex;
     height: 9ex;
-    background-color: transparent;
+    background: transparent;
     border: 1px solid transparent;
     padding: 1px;
     margin: 0;
@@ -340,7 +435,7 @@ QMenu {
 QMenu::item {
     height: $InputHeight;
     padding-left: 17ex;
-    padding-right: 5ex;
+    padding-right: 10ex;
     border: 1px solid transparent; /* reserve space for selection border */
 }
 
@@ -406,10 +501,11 @@ QMenu::indicator:exclusive:checked:disabled {
 
 /* ****************************************************************************************************************** */
 QHeaderView::section {
-    height: 15.3ex;
-    width: 60ex;
-    min-width: 40ex;
+    height: $InputHeight;
+    min-height: $InputHeight;
+    max-height: $InputHeight;
     background: #eeeeee;
+    /*{lin}font-weight: bold;*/
 }
 
 /* ****************************************************************************************************************** */
@@ -422,6 +518,7 @@ DockWidget
         QLabel {
             color: white;
             margin-left: 4px;
+            background: transparent;
         }
 
         QPushButton {
@@ -465,7 +562,7 @@ QProgressBar::chunk {
 
 /* ****************************************************************************************************************** */
 QScrollBar {
-    background-color: transparent;
+    background: transparent;
     border: none;
     padding: 0;
 }
@@ -507,7 +604,7 @@ QScrollBar::add-line, QScrollBar::sub-line {
 }
 
 WindowHeader {
-    background-color: white;
+    background-color: $BackgroundColor;
     height: $WindowHeaderSize;
     min-height: $WindowHeaderSize;
     max-height: $WindowHeaderSize;
@@ -548,8 +645,8 @@ WindowHeader {
     }
 
     QPushButton#WindowHeader_MinButton:hover {
-        background-color: lighten($BorderColor, 5%);
-        border-bottom: 1px solid lighten($BorderColor, 5%);
+        background-color: $WindowHeaderHoverColor;
+        border-bottom: 1px solid $WindowHeaderHoverColor;
     }
 
     QPushButton#WindowHeader_MinButton:pressed {
@@ -568,8 +665,8 @@ WindowHeader {
     }
 
     QPushButton#WindowHeader_MaxButton:hover {
-        background-color: lighten($BorderColor, 5%);
-        border-bottom: 1px solid lighten($BorderColor, 5%);
+        background-color: $WindowHeaderHoverColor;
+        border-bottom: 1px solid $WindowHeaderHoverColor;
     }
 
     QPushButton#WindowHeader_MaxButton:pressed {
@@ -583,12 +680,13 @@ WindowHeader[left=true] {
 }
 
 BookmarkEditor {
-    background-color: white;
+    background-color: $BackgroundColor;
     border: 1px solid $BorderColor;
 
     QWidget#BookmarkEditor_ColorBox {
         margin: 0;
         padding: 0;
+        background: transparent;
 
         QPushButton#BookmarkEditor_ColorButton {
             min-width: $InputHeight;
@@ -606,5 +704,5 @@ BookmarkEditor {
 
 Dialog {
     border: 1px solid $BorderColor;
-    background-color: white;
+    background-color: $BackgroundColor;
 }

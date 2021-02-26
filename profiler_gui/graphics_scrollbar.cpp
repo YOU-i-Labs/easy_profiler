@@ -12,7 +12,7 @@
 *                   : *
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -61,6 +61,8 @@
 #include "graphics_scrollbar.h"
 #include "globals.h"
 
+namespace {
+
 //////////////////////////////////////////////////////////////////////////
 
 EASY_CONSTEXPR int HIST_COLUMN_MIN_HEIGHT = 2;
@@ -78,16 +80,24 @@ inline qreal calculate_color2(qreal, qreal duration, qreal k)
     return std::min(sqr(sqr(duration)) * k, 0.9999999);
 }
 
+} // end of namespace <noname>.
+
 //////////////////////////////////////////////////////////////////////////
 
 GraphicsHistogramItem::GraphicsHistogramItem() : Parent()
-    , m_threadDuration(0)
-    , m_threadProfiledTime(0)
-    , m_threadWaitTime(0)
-    , m_pSource(nullptr)
     , m_workerTopDuration(0)
     , m_workerBottomDuration(0)
     , m_blockTotalDuraion(0)
+    , m_threadDuration(0)
+    , m_threadProfiledTime(0)
+    , m_threadWaitTime(0)
+    , m_medianDuration(0)
+    , m_avgDuration(0)
+    , m_medianDurationFull(0)
+    , m_avgDurationFull(0)
+    , m_workerMedianDuration(0)
+    , m_workerAvgDuration(0)
+    , m_pSource(nullptr)
     , m_pProfilerThread(nullptr)
     , m_threadId(0)
     , m_blockId(profiler_gui::numeric_max<decltype(m_blockId)>())
@@ -115,6 +125,11 @@ void GraphicsHistogramItem::paint(QPainter* _painter, const QStyleOptionGraphics
 
 void GraphicsHistogramItem::paintMouseIndicator(QPainter* _painter, qreal _top, qreal _bottom, qreal _width, qreal _height, qreal _top_width, qreal _mouse_y, qreal _delta_time, int _font_h)
 {
+    if (isEmpty())
+    {
+        return;
+    }
+
     if (_font_h != 0 && _top < _mouse_y && _mouse_y < _bottom)
     {
         const int half_font_h = _font_h >> 1;
@@ -156,7 +171,6 @@ void GraphicsHistogramItem::paintByPtr(QPainter* _painter)
     const auto dtime = m_topValue - m_bottomValue;
     const auto coeff = m_boundingRect.height() / (dtime > 1e-3 ? dtime : 1.);
 
-    QRectF rect;
     QBrush brush(Qt::SolidPattern);
     //QRgb previousColor = 0;
 
@@ -173,29 +187,58 @@ void GraphicsHistogramItem::paintByPtr(QPainter* _painter)
 
     qreal top_width = width, bottom_width = width;
     const auto font_h = widget->fontHeight();
-    rect.setRect(0, m_boundingRect.top() - widget->margin(), width - 3, font_h);
 
-    _painter->setPen(profiler_gui::TEXT_COLOR);
-    _painter->drawText(rect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextDontClip, bindMode ? " Mode: Zoom" : " Mode: Overview");
+    QRectF bottomRect(3, bottom + 2, width - 3, font_h);
+    QRectF topRect(3, m_boundingRect.top() - widget->margin(), width - 3, font_h);
+    QRectF textBounds;
 
-    if (!m_topDurationStr.isEmpty())
+    // MODE
+    {
+        _painter->setPen(Qt::blue);
+        _painter->drawText(
+            topRect,
+            Qt::AlignLeft | Qt::AlignVCenter | Qt::TextDontClip | Qt::TextIncludeTrailingSpaces,
+            QStringLiteral("MODE: "),
+            &textBounds
+        );
+        topRect.adjust(textBounds.width(), 0, 0, 0);
+
+        _painter->setPen(profiler_gui::TEXT_COLOR);
+        _painter->drawText(
+            topRect,
+            Qt::AlignLeft | Qt::AlignVCenter | Qt::TextDontClip,
+            bindMode ? "Zoom" : "Overview",
+            &textBounds
+        );
+        topRect.adjust(textBounds.width() + 3, 0, 0, 0);
+    }
+
+    // TOP & BOTTOM duration
+    if (!isEmpty() && !m_topDurationStr.isEmpty())
     {
         if (m_timeUnits != EASY_GLOBALS.time_units)
         {
             m_timeUnits = EASY_GLOBALS.time_units;
             m_topDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_topValue, 3);
             m_bottomDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_bottomValue, 3);
+
+            if (m_avgDuration != 0 || m_medianDuration != 0)
+            {
+                m_medianDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_medianDuration, 3);
+                m_avgDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_avgDuration, 3);
+            }
         }
 
         //auto fm = _painter->fontMetrics();
         //top_width -= fm.width(m_topDurationStr) + 7;
 
         _painter->setPen(m_topValue < m_maxValue ? QColor(Qt::darkRed) : profiler_gui::TEXT_COLOR);
-        _painter->drawText(rect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_topDurationStr);
+        _painter->drawText(topRect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_topDurationStr, &textBounds);
+        topRect.adjust(0, 0, -textBounds.width() - 3, 0);
 
-        rect.setRect(0, bottom + 2, width - 3, font_h);
         _painter->setPen(m_bottomValue > m_minValue ? QColor(Qt::darkRed) : profiler_gui::TEXT_COLOR);
-        _painter->drawText(rect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_bottomDurationStr);
+        _painter->drawText(bottomRect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_bottomDurationStr, &textBounds);
+        bottomRect.adjust(0, 0, -textBounds.width() - 3, 0);
     }
 
     _painter->setPen(Qt::darkGray);
@@ -204,35 +247,52 @@ void GraphicsHistogramItem::paintByPtr(QPainter* _painter)
 
     paintMouseIndicator(_painter, m_boundingRect.top(), bottom, width, m_boundingRect.height(), top_width, m_mousePos.y(), dtime, font_h);
 
-    if (m_bottomValue < EASY_GLOBALS.frame_time && EASY_GLOBALS.frame_time < m_topValue)
+    // MEDIAN & EXPECTED FRAME TIME
+    if (!isEmpty())
     {
-        // Draw marker displaying expected frame_time step
-        const auto h = bottom - (EASY_GLOBALS.frame_time - m_bottomValue) * coeff;
-        _painter->setPen(Qt::DashLine);
+        if (m_bottomValue < EASY_GLOBALS.frame_time && EASY_GLOBALS.frame_time < m_topValue)
+        {
+            // Draw marker displaying expected frame_time step
+            const auto h = bottom - (EASY_GLOBALS.frame_time - m_bottomValue) * coeff;
+            _painter->setPen(Qt::DashLine);
 
-        auto w = width;
-        const auto boundary = widget->margin() - font_h;
-        if (h < (m_boundingRect.top() - boundary))
-            w = top_width;
-        else if (h > (bottom + boundary))
-            w = bottom_width;
+            auto w = width;
+            const auto boundary = widget->margin() - font_h;
+            if (h < (m_boundingRect.top() - boundary))
+                w = top_width;
+            else if (h > (bottom + boundary))
+                w = bottom_width;
 
-        _painter->drawLine(QLineF(0, h, w, h));
+            _painter->drawLine(QLineF(0, h, w, h));
+        }
     }
 
     _painter->setPen(profiler_gui::TEXT_COLOR);
-    rect.setRect(0, bottom + 2, width, font_h);
-    const auto eventsSize = m_pProfilerThread->events.size();
-    _painter->drawText(rect, Qt::AlignCenter | Qt::TextDontClip, QString("%1  |  duration: %2  |  profiled: %3 (%4%)  |  wait: %5 (%6%)  |  %7 frames  |  %8 blocks  |  %9 markers")
-                       .arg(m_threadName)
-                       .arg(profiler_gui::timeStringRealNs(EASY_GLOBALS.time_units, m_threadDuration))
-                       .arg(profiler_gui::timeStringRealNs(EASY_GLOBALS.time_units, m_threadProfiledTime))
-                       .arg(m_threadDuration ? QString::number(100. * (double)m_threadProfiledTime / (double)m_threadDuration, 'f', 2) : QString("0"))
-                       .arg(profiler_gui::timeStringRealNs(EASY_GLOBALS.time_units, m_threadWaitTime))
-                       .arg(m_threadDuration ? QString::number(100. * (double)m_threadWaitTime / (double)m_threadDuration, 'f', 2) : QString("0"))
-                       .arg(m_pProfilerThread->frames_number)
-                       .arg(m_pProfilerThread->blocks_number - eventsSize)
-                       .arg(eventsSize));
+    const auto eventsCount = static_cast<uint64_t>(m_pProfilerThread->events.size());
+    const auto blocksCount = m_pProfilerThread->blocks_number - eventsCount;
+
+    QString durationsStr;
+    if (!m_medianDurationStr.isEmpty() || !m_avgDurationStr.isEmpty())
+    {
+        durationsStr = QString("avg: %1 | mdn: %2 | ").arg(m_avgDurationStr).arg(m_medianDurationStr);
+    }
+
+    _painter->drawText(topRect, Qt::AlignCenter, m_threadName);
+
+    _painter->drawText(bottomRect, Qt::AlignCenter,
+        QStringLiteral("time: %1 | profiled: %2 (%3%) | wait: %4 (%5%) | %6%7 frames | %8 blocks | %9 markers")
+            .arg(profiler_gui::timeStringRealNs(EASY_GLOBALS.time_units, m_threadDuration))
+            .arg(profiler_gui::timeStringRealNs(EASY_GLOBALS.time_units, m_threadProfiledTime))
+            .arg(m_threadDuration ? QString::number(100. * (double) m_threadProfiledTime / (double) m_threadDuration, 'f', 2)
+                                  : QString("0"))
+            .arg(profiler_gui::timeStringRealNs(EASY_GLOBALS.time_units, m_threadWaitTime))
+            .arg(m_threadDuration ? QString::number(100. * (double) m_threadWaitTime / (double) m_threadDuration, 'f', 2)
+                                  : QString("0"))
+            .arg(durationsStr)
+            .arg(profiler_gui::shortenCountString(m_pProfilerThread->frames_number))
+            .arg(profiler_gui::shortenCountString(blocksCount))
+            .arg(profiler_gui::shortenCountString(eventsCount))
+    );
 
     _painter->restore();
 }
@@ -247,7 +307,6 @@ void GraphicsHistogramItem::paintById(QPainter* _painter)
     const auto dtime = m_topValue - m_bottomValue;
     const auto coeff = m_boundingRect.height() / (dtime > 1e-3 ? dtime : 1.);
 
-    QRectF rect;
     QBrush brush(Qt::SolidPattern);
     //QRgb previousColor = 0;
 
@@ -265,29 +324,58 @@ void GraphicsHistogramItem::paintById(QPainter* _painter)
 
     qreal top_width = width, bottom_width = width;
     const auto font_h = widget->fontHeight();
-    rect.setRect(0, m_boundingRect.top() - widget->margin(), width - 3, font_h);
 
-    _painter->setPen(profiler_gui::TEXT_COLOR);
-    _painter->drawText(rect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextDontClip, bindMode ? " Mode: Zoom" : " Mode: Overview");
+    QRectF bottomRect(3, bottom + 2, width - 3, font_h);
+    QRectF topRect(3, m_boundingRect.top() - widget->margin(), width - 3, font_h);
+    QRectF textBounds;
 
-    if (!m_topDurationStr.isEmpty())
+    // MODE
+    {
+        _painter->setPen(Qt::blue);
+        _painter->drawText(
+            topRect,
+            Qt::AlignLeft | Qt::AlignVCenter | Qt::TextDontClip | Qt::TextIncludeTrailingSpaces,
+            QStringLiteral("MODE: "),
+            &textBounds
+        );
+        topRect.adjust(textBounds.width(), 0, 0, 0);
+
+        _painter->setPen(profiler_gui::TEXT_COLOR);
+        _painter->drawText(
+            topRect,
+            Qt::AlignLeft | Qt::AlignVCenter | Qt::TextDontClip,
+            bindMode ? "Zoom" : "Overview",
+            &textBounds
+        );
+        topRect.adjust(textBounds.width() + 3, 0, 0, 0);
+    }
+
+    // TOP & BOTTOM duration
+    if (!isEmpty() && !m_topDurationStr.isEmpty())
     {
         if (m_timeUnits != EASY_GLOBALS.time_units)
         {
             m_timeUnits = EASY_GLOBALS.time_units;
             m_topDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_topValue, 3);
             m_bottomDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_bottomValue, 3);
+
+            if (m_avgDuration != 0 || m_medianDuration != 0)
+            {
+                m_medianDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_medianDuration, 3);
+                m_avgDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_avgDuration, 3);
+            }
         }
 
         //auto fm = _painter->fontMetrics();
         //top_width -= fm.width(m_topDurationStr) + 7;
 
         _painter->setPen(m_topValue < m_maxValue ? QColor(Qt::darkRed) : profiler_gui::TEXT_COLOR);
-        _painter->drawText(rect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_topDurationStr);
+        _painter->drawText(topRect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_topDurationStr, &textBounds);
+        topRect.adjust(0, 0, -textBounds.width() - 3, 0);
 
-        rect.setRect(0, bottom + 2, width - 3, font_h);
         _painter->setPen(m_bottomValue > m_minValue ? QColor(Qt::darkRed) : profiler_gui::TEXT_COLOR);
-        _painter->drawText(rect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_bottomDurationStr);
+        _painter->drawText(bottomRect, Qt::AlignRight | Qt::AlignVCenter | Qt::TextDontClip, m_bottomDurationStr, &textBounds);
+        bottomRect.adjust(0, 0, -textBounds.width() - 3, 0);
     }
 
     _painter->setPen(Qt::darkGray);
@@ -296,44 +384,71 @@ void GraphicsHistogramItem::paintById(QPainter* _painter)
 
     paintMouseIndicator(_painter, m_boundingRect.top(), bottom, width, m_boundingRect.height(), top_width, m_mousePos.y(), dtime, font_h);
 
-    if (m_bottomValue < EASY_GLOBALS.frame_time && EASY_GLOBALS.frame_time < m_topValue)
+    // MEDIAN & EXPECTED FRAME TIME
+    if (!isEmpty())
     {
-        // Draw marker displaying required frame_time step
-        const auto h = bottom - (EASY_GLOBALS.frame_time - m_bottomValue) * coeff;
-        _painter->setPen(Qt::DashLine);
+        if (m_bottomValue < EASY_GLOBALS.frame_time && EASY_GLOBALS.frame_time < m_topValue)
+        {
+            // Draw marker displaying required frame_time step
+            const auto h = bottom - (EASY_GLOBALS.frame_time - m_bottomValue) * coeff;
+            _painter->setPen(Qt::DashLine);
 
-        auto w = width;
-        const auto boundary = widget->margin() - font_h;
-        if (h < (m_boundingRect.top() - boundary))
-            w = top_width;
-        else if (h >(bottom + boundary))
-            w = bottom_width;
+            auto w = width;
+            const auto boundary = widget->margin() - font_h;
+            if (h < (m_boundingRect.top() - boundary))
+                w = top_width;
+            else if (h > (bottom + boundary))
+                w = bottom_width;
 
-        _painter->drawLine(QLineF(0, h, w, h));
+            _painter->drawLine(QLineF(0, h, w, h));
+        }
     }
 
-    _painter->setPen(profiler_gui::TEXT_COLOR);
-    rect.setRect(0, bottom + 2, width, font_h);
+    const auto colorIndicatorSize = font_h * 2 / 3;
 
-    if (!m_selectedBlocks.empty())
+    _painter->setBrush(QColor::fromRgba(easyDescriptor(m_blockId).color()));
+    _painter->setPen(profiler_gui::BLOCK_BORDER_COLOR);
+    _painter->drawRect(QRectF(bottomRect.left(), bottomRect.top() + 1 + font_h / 6., colorIndicatorSize, colorIndicatorSize));
+    bottomRect.adjust(colorIndicatorSize + 3, 0, 0, 0);
+
+    _painter->setPen(profiler_gui::TEXT_COLOR);
+    _painter->drawText(topRect, Qt::AlignCenter, m_threadName);
+
+    _painter->drawText(bottomRect, Qt::AlignLeft, m_blockName, &textBounds);
+    bottomRect.adjust(textBounds.width() + 3, 0, 0, 0);
+
+    _painter->drawText(bottomRect, Qt::AlignLeft, QStringLiteral("| %1").arg(m_blockType), &textBounds);
+    bottomRect.adjust(textBounds.width() + 3, 0, 0, 0);
+
+    if (!items.empty())
     {
+        QString durationsStr;
+        if (!m_medianDurationStr.isEmpty() || !m_avgDurationStr.isEmpty())
+        {
+            durationsStr = QString("avg: %1 | mdn: %2 | ").arg(m_avgDurationStr).arg(m_medianDurationStr);
+        }
+
         if (m_threadProfiledTime != 0)
         {
-            _painter->drawText(rect, Qt::AlignCenter | Qt::TextDontClip,
-                QString("%1  |  %2  |  %3 calls  |  %4% of thread profiled time")
-                    .arg(m_threadName).arg(m_blockName).arg(m_selectedBlocks.size())
-                    .arg(QString::number(100. * (double)m_blockTotalDuraion / (double)m_threadProfiledTime, 'f', 2)));
+            _painter->drawText(bottomRect, Qt::AlignCenter,
+                QStringLiteral("%1 calls | %2%3% of thread profiled time")
+                    .arg(items.size())
+                    .arg(durationsStr)
+                    .arg(QString::number(100. * (double) m_blockTotalDuraion / (double) m_threadProfiledTime, 'f', 2))
+            );
         }
         else
         {
-            _painter->drawText(rect, Qt::AlignCenter | Qt::TextDontClip,
-                QString("%1  |  %2  |  %3 calls  |  100% of thread profiled time")
-                    .arg(m_threadName).arg(m_blockName).arg(m_selectedBlocks.size()));
+            _painter->drawText(bottomRect, Qt::AlignCenter,
+                QStringLiteral("%1 calls | %2100% of thread profiled time")
+                    .arg(items.size())
+                    .arg(durationsStr)
+            );
         }
     }
     else
     {
-        _painter->drawText(rect, Qt::AlignCenter | Qt::TextDontClip, QString("%1  |  %2  |  0 calls").arg(m_threadName).arg(m_blockName));
+        _painter->drawText(bottomRect, Qt::AlignCenter, QStringLiteral("0 calls"));
     }
 
     _painter->restore();
@@ -374,13 +489,24 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, const pr
     m_boundaryTimer.stop();
 
     m_blockName.clear();
+    m_blockType = QStringLiteral("Thread");
     m_blockTotalDuraion = 0;
+    m_medianDuration = 0;
+    m_avgDuration = 0;
+    m_medianDurationFull = 0;
+    m_avgDurationFull = 0;
 
     m_imageOriginUpdate = m_imageOrigin = 0;
     m_imageScaleUpdate = m_imageScale = 1;
 
     m_selectedBlocks.clear();
+    setEmpty(true);
     { profiler::BlocksTree::children_t().swap(m_selectedBlocks); }
+
+    m_topDurationStr.clear();
+    m_bottomDurationStr.clear();
+    m_medianDurationStr.clear();
+    m_avgDurationStr.clear();
 
     setImageUpdatePermitted(false);
     m_regime = Hist_Pointer;
@@ -417,14 +543,24 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, const pr
                 m_maxValue = 0;
                 m_minValue = 1e30;
 
+                size_t totalCount = 0;
+                profiler_gui::DurationsCountMap durations;
                 bool empty = true;
                 for (const auto& item : *source)
                 {
                     if (isReady())
                         return;
 
-                    if (easyDescriptor(easyBlock(item.block).tree.node->id()).type() == profiler::BlockType::Event)
+                    auto& block = easyBlock(item.block).tree;
+                    auto& desc = easyDescriptor(block.node->id());
+                    if (desc.type() != profiler::BlockType::Block)
                         continue;
+
+                    const auto duration = block.node->duration();
+
+                    ++totalCount;
+                    ++durations[duration].count;
+                    m_avgDuration += duration;
 
                     const auto w = item.width();
 
@@ -435,6 +571,12 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, const pr
                         m_minValue = w;
 
                     empty = false;
+                }
+
+                if (!empty)
+                {
+                    m_avgDuration /= totalCount;
+                    m_medianDuration = profiler_gui::calculateMedian(durations);
                 }
 
                 if ((m_maxValue - m_minValue) < 1e-3)
@@ -458,12 +600,16 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, const pr
                     m_topDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_topValue, 3);
                     m_bottomDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_bottomValue, 3);
                 }
-                else
+
+                if (m_avgDuration != 0 || m_medianDuration != 0)
                 {
-                    m_topDurationStr.clear();
-                    m_bottomDurationStr.clear();
+                    m_avgDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_avgDuration, 3);
+                    m_medianDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_medianDuration, 3);
+                    m_medianDurationFull = m_medianDuration;
+                    m_avgDurationFull = m_avgDuration;
                 }
 
+                setEmpty(empty);
                 setReady(true);
 
             }, m_bReady);
@@ -476,8 +622,6 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, const pr
     if (m_pSource == nullptr)
     {
         m_pProfilerThread = nullptr;
-        m_topDurationStr.clear();
-        m_bottomDurationStr.clear();
         m_threadName.clear();
         hide();
     }
@@ -498,13 +642,21 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, profiler
     m_pSource = nullptr;
     m_topDurationStr.clear();
     m_bottomDurationStr.clear();
+    m_medianDurationStr.clear();
+    m_avgDurationStr.clear();
     m_blockName.clear();
+    m_blockType.clear();
     m_blockTotalDuraion = 0;
+    m_medianDuration = 0;
+    m_avgDuration = 0;
+    m_medianDurationFull = 0;
+    m_avgDurationFull = 0;
 
     m_imageOriginUpdate = m_imageOrigin = 0;
     m_imageScaleUpdate = m_imageScale = 1;
 
     m_selectedBlocks.clear();
+    setEmpty(true);
     { profiler::BlocksTree::children_t().swap(m_selectedBlocks); }
 
     m_threadId = _thread_id;
@@ -512,7 +664,31 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, profiler
 
     if (m_threadId != 0 && !profiler_gui::is_max(m_blockId))
     {
-        m_blockName = profiler_gui::toUnicode(easyDescriptor(m_blockId).name());
+        auto& desc = easyDescriptor(m_blockId);
+        m_blockName = profiler_gui::toUnicode(desc.name());
+
+        switch (desc.type())
+        {
+            case profiler::BlockType::Block:
+            {
+                m_blockType = QStringLiteral("Block");
+                break;
+            }
+
+            case profiler::BlockType::Event:
+            {
+                m_blockType = QStringLiteral("Event");
+                break;
+            }
+
+            case profiler::BlockType::Value:
+            {
+                m_blockType = QStringLiteral("Value");
+                break;
+            }
+
+            default: break;
+        }
 
         const auto& root = EASY_GLOBALS.profiler_blocks[_thread_id];
         m_threadName = profiler_gui::decoratedThreadName(EASY_GLOBALS.use_decorated_thread_name, root, EASY_GLOBALS.hex_thread_id);
@@ -556,6 +732,8 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, profiler
 
                 const bool has_selected_block = !profiler_gui::is_max(selected_block);
 
+                size_t totalCount = 0;
+                profiler_gui::DurationsCountMap durations;
                 for (auto frame : profiler_thread.children)
                 {
                     const auto& frame_block = easyBlock(frame).tree;
@@ -570,6 +748,8 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, profiler
                         if (w < m_minValue)
                             m_minValue = w;
 
+                        ++totalCount;
+                        ++durations[w].count;
                         m_blockTotalDuraion += w;
                     }
 
@@ -603,6 +783,8 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, profiler
                                 if (w < m_minValue)
                                     m_minValue = w;
 
+                                ++totalCount;
+                                ++durations[w].count;
                                 m_blockTotalDuraion += w;
                             }
 
@@ -625,6 +807,8 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, profiler
                 {
                     m_topDurationStr.clear();
                     m_bottomDurationStr.clear();
+                    m_medianDurationStr.clear();
+                    m_avgDurationStr.clear();
                 }
                 else
                 {
@@ -651,13 +835,29 @@ void GraphicsHistogramItem::setSource(profiler::thread_id_t _thread_id, profiler
                         }
                     }
 
+                    if (totalCount != 0)
+                    {
+                        m_avgDuration = m_blockTotalDuraion / totalCount;
+                        m_medianDuration = profiler_gui::calculateMedian(durations);
+                    }
+
+                    m_medianDurationFull = m_medianDuration;
+                    m_avgDurationFull = m_avgDuration;
+
                     m_topDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_maxValue, 3);
                     m_bottomDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_minValue, 3);
+
+                    if (m_avgDuration != 0 || m_medianDuration != 0)
+                    {
+                        m_avgDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_avgDuration, 3);
+                        m_medianDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_medianDuration, 3);
+                    }
                 }
 
                 m_topValue = m_maxValue;
                 m_bottomValue = m_minValue;
 
+                setEmpty(m_selectedBlocks.empty());
                 setReady(true);
 
             }, m_bReady);
@@ -770,7 +970,7 @@ bool GraphicsHistogramItem::decreaseBottomValue()
 
 void GraphicsHistogramItem::pickFrameTime(qreal _y) const
 {
-    if (isImageUpdatePermitted() && m_boundingRect.top() < _y && _y < m_boundingRect.bottom() && !m_topDurationStr.isEmpty())
+    if (!isEmpty() && isImageUpdatePermitted() && m_boundingRect.top() < _y && _y < m_boundingRect.bottom() && !m_topDurationStr.isEmpty())
     {
         const auto frame_time = m_bottomValue + (m_topValue - m_bottomValue) * (m_boundingRect.bottom() - _y) / m_boundingRect.height();
         EASY_GLOBALS.frame_time = static_cast<decltype(EASY_GLOBALS.frame_time)>(frame_time);
@@ -822,9 +1022,11 @@ bool GraphicsHistogramItem::updateImage()
     const auto frameTime = EASY_GLOBALS.frame_time;
     const auto beginTime = EASY_GLOBALS.begin_time;
     const auto autoHeight = EASY_GLOBALS.auto_adjust_histogram_height;
+    const auto drawBorders = EASY_GLOBALS.draw_histogram_borders;
+    const auto minColumnWidth = EASY_GLOBALS.histogram_column_width_min;
     m_worker.enqueue([=] {
-        updateImageAsync(rect, regime, scale, left, right, right - left, value, window, top, bottom, bindMode,
-                         frameTime, beginTime, autoHeight);
+        updateImageAsync(rect, regime, scale, left, right, right - left, value, window, top, bottom,
+                         minColumnWidth, bindMode, frameTime, beginTime, autoHeight, drawBorders);
     }, m_bReady);
 
     return true;
@@ -840,12 +1042,28 @@ void GraphicsHistogramItem::onImageUpdated()
         m_topDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_topValue, 3);
         m_bottomDurationStr = profiler_gui::timeStringReal(m_timeUnits, m_bottomValue, 3);
     }
+
+    if (static_cast<const GraphicsSliderArea*>(scene()->parent())->bindMode())
+    {
+        m_medianDuration = m_workerMedianDuration;
+        m_avgDuration = m_workerAvgDuration;
+    }
+    else
+    {
+        m_medianDuration = m_medianDurationFull;
+        m_avgDuration = m_avgDurationFull;
+    }
+
+    if (m_avgDuration != 0 || m_medianDuration != 0)
+    {
+        m_medianDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_medianDuration, 3);
+        m_avgDurationStr = profiler_gui::timeStringRealNs(m_timeUnits, m_avgDuration, 3);
+    }
 }
 
 void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _regime, qreal _current_scale,
-    qreal _minimum, qreal _maximum, qreal _range,
-    qreal _value, qreal _width, qreal _top_duration, qreal _bottom_duration,
-    bool _bindMode, float _frame_time, profiler::timestamp_t _begin_time, bool _autoAdjustHist)
+    qreal _minimum, qreal _maximum, qreal _range, qreal _value, qreal _width, qreal _top_duration, qreal _bottom_duration,
+    int _min_column_width, bool _bindMode, float _frame_time, profiler::timestamp_t _begin_time, bool _autoAdjustHist, bool _drawBorders)
 {
     const auto bottom = _boundingRect.height();//_boundingRect.bottom();
     const auto screenWidth = _boundingRect.width() * _current_scale;
@@ -890,6 +1108,11 @@ void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _r
     auto const calculate_color = gotFrame ? calculate_color2 : calculate_color1;
     auto const k = gotFrame ? sqr(sqr(frameCoeff)) : 1.0 / _boundingRect.height();
 
+    size_t totalCount = 0;
+    m_workerMedianDuration = 0;
+    m_workerAvgDuration = 0;
+    profiler_gui::DurationsCountMap durations;
+
     if (_regime == Hist_Pointer)
     {
         const auto& items = *m_pSource;
@@ -905,7 +1128,7 @@ void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _r
             realScale *= viewScale;
             offset = _minimum * realScale;
 
-            first = std::lower_bound(items.begin(), items.end(), _minimum, [](const profiler_gui::EasyBlockItem& _item, qreal _value)
+            first = std::lower_bound(items.begin(), items.end(), _minimum, [] (const profiler_gui::EasyBlockItem& _item, qreal _value)
             {
                 return _item.left() < _value;
             });
@@ -968,6 +1191,10 @@ void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _r
         const auto dtime = _top_duration - _bottom_duration;
         const auto coeff = _boundingRect.height() / (dtime > 1e-3 ? dtime : 1.);
 
+        const qreal minWidth = _drawBorders ? _min_column_width : 1;
+        if (_drawBorders)
+            p.setPen(profiler_gui::BLOCK_BORDER_COLOR);
+
         for (auto it = first, end = items.end(); it != end; ++it)
         {
             // Draw rectangle
@@ -977,16 +1204,97 @@ void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _r
             if (it->right() < _minimum)
                 continue;
 
-            const qreal item_x = it->left() * realScale - offset;
-            const qreal item_w = std::max(it->width() * realScale, 1.0);
-            const qreal item_r = item_x + item_w;
-            const qreal h = it->width() <= _bottom_duration ? HIST_COLUMN_MIN_HEIGHT : 
-                (it->width() > _top_duration ? maxColumnHeight : (it->width() - _bottom_duration) * coeff);
+            if (_bindMode)
+            {
+                // calculate avg and median
+                const auto duration = easyBlock(it->block).tree.node->duration();
+                m_workerAvgDuration += duration;
+                ++totalCount;
+                ++durations[duration].count;
+            }
+
+            auto maxItemWidth = it->width();
+
+            // calculate column width and height
+            qreal item_x = it->left() * realScale - offset;
+            qreal item_w = it->width() * realScale;
+            qreal item_r = item_x + item_w;
+            const auto width = it->width();
+            qreal h = width <= _bottom_duration ? HIST_COLUMN_MIN_HEIGHT :
+                (width > _top_duration ? maxColumnHeight : (width - _bottom_duration) * coeff);
+
+            if (_drawBorders)
+            {
+                if (item_r < previous_x)
+                {
+                    item_w -= previous_x - item_r;
+                    item_x = previous_x;
+                    item_r = item_x + item_w;
+                }
+
+                // if column width < minWidth then try to merge several columns together
+                auto jt = it;
+                while (item_w < minWidth && jt != end)
+                {
+                    if (jt->left() > _maximum)
+                        break;
+
+                    const qreal jx = jt->left() * realScale - offset;
+                    auto dx = jx - item_r;
+                    if (dx > std::max(item_w, minWidth))
+                    {
+                        item_w = minWidth;
+                        break;
+                    }
+
+                    const qreal jw = jt->width() * realScale;
+                    if (jw > (minWidth + item_w))
+                    {
+                        item_w = minWidth;
+                        break;
+                    }
+
+                    const auto jwidth = jt->width();
+                    const qreal jh = jwidth <= _bottom_duration ? HIST_COLUMN_MIN_HEIGHT :
+                        (jwidth > _top_duration ? maxColumnHeight : (jwidth - _bottom_duration) * coeff);
+
+                    item_w += jw;
+                    h = std::max(h, jh);
+                    maxItemWidth = std::max(maxItemWidth, jwidth);
+                    ++jt;
+                }
+
+                item_r = item_x + item_w;
+
+                if (_bindMode)
+                {
+                    // if merged several columns then avg and median should be calculated for these columns too
+                    for (auto it2 = it; it2 != jt; ++it2)
+                    {
+                        const auto duration = easyBlock(it2->block).tree.node->duration();
+                        m_workerAvgDuration += duration;
+                        ++totalCount;
+                        ++durations[duration].count;
+                    }
+                }
+
+                if (jt != it)
+                {
+                    // bypass merged columns
+                    it = jt;
+                    --it;
+                }
+            }
+            else if (item_w < 1)
+            {
+                item_w = 1;
+                item_r = item_x + 1;
+            }
 
             if (h < previous_h && item_r < previous_x)
                 continue;
 
-            const auto col = calculate_color(h, it->width(), k);
+            const auto col = calculate_color(h, maxItemWidth, k);
             const auto color = 0x00ffffff & QColor::fromHsvF((1.0 - col) * 0.375, 0.85, 0.85).rgb();
 
             if (previousColor != color)
@@ -1091,6 +1399,10 @@ void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _r
         const auto dtime = _top_duration - _bottom_duration;
         const auto coeff = _boundingRect.height() / (dtime > 1e-3 ? dtime : 1.);
 
+        const qreal minWidth = _drawBorders ? _min_column_width : 1;
+        if (_drawBorders)
+            p.setPen(profiler_gui::BLOCK_BORDER_COLOR);
+
         for (auto it = first, end = m_selectedBlocks.end(); it != end; ++it)
         {
             // Draw rectangle
@@ -1104,17 +1416,100 @@ void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _r
             if (endTime < _minimum)
                 continue;
 
+            if (_bindMode)
+            {
+                // calculate avg and median
+                const auto duration = item->duration();
+                m_workerAvgDuration += duration;
+                ++totalCount;
+                ++durations[duration].count;
+            }
+
             const qreal duration = item->duration() * 1e-3;
-            const qreal item_x = (beginTime * realScale - offset) * 1e-3;
-            const qreal item_w = std::max(duration * realScale, 1.0);
-            const qreal item_r = item_x + item_w;
-            const auto h = duration <= _bottom_duration ? HIST_COLUMN_MIN_HEIGHT :
+            auto maxItemDuration = duration;
+
+            // calculate column width and height
+            qreal item_x = (beginTime * realScale - offset) * 1e-3;
+            qreal item_w = duration * realScale;
+            qreal item_r = item_x + item_w;
+            auto h = duration <= _bottom_duration ? HIST_COLUMN_MIN_HEIGHT :
                 (duration > _top_duration ? maxColumnHeight : (duration - _bottom_duration) * coeff);
+
+            if (_drawBorders)
+            {
+                if (item_r < previous_x)
+                {
+                    item_w -= previous_x - item_r;
+                    item_x = previous_x;
+                    item_r = item_x + item_w;
+                }
+
+                // if column width < minWidth then try to merge several columns together
+                auto jt = it;
+                while (item_w < minWidth && jt != end)
+                {
+                    const auto jtem = easyBlock(*jt).tree.node;
+                    const auto jbeginTime = jtem->begin() - _begin_time;
+                    if (jbeginTime > _maximum)
+                        break;
+
+                    const qreal jduration = jtem->duration() * 1e-3;
+
+                    const qreal jx = ((jtem->begin() - _begin_time) * realScale - offset) * 1e-3;
+                    auto dx = jx - item_r;
+                    if (dx > std::max(item_w, minWidth))
+                    {
+                        item_w = minWidth;
+                        break;
+                    }
+
+                    const qreal jw = jduration * realScale;
+                    if (jw > (minWidth + item_w))
+                    {
+                        item_w = minWidth;
+                        break;
+                    }
+
+                    const qreal jh = jduration <= _bottom_duration ? HIST_COLUMN_MIN_HEIGHT :
+                        (jduration > _top_duration ? maxColumnHeight : (jduration - _bottom_duration) * coeff);
+
+                    item_w += jw;
+                    h = std::max(h, jh);
+                    maxItemDuration = std::max(maxItemDuration, jduration);
+                    ++jt;
+                }
+
+                item_r = item_x + item_w;
+
+                if (_bindMode)
+                {
+                    // if merged several columns then avg and median should be calculated for these columns too
+                    for (auto it2 = it; it2 != jt; ++it2)
+                    {
+                        const auto duration = easyBlock(*it2).tree.node->duration();
+                        m_workerAvgDuration += duration;
+                        ++totalCount;
+                        ++durations[duration].count;
+                    }
+                }
+
+                if (jt != it)
+                {
+                    // bypass merged columns
+                    it = jt;
+                    --it;
+                }
+            }
+            else if (item_w < 1)
+            {
+                item_w = 1;
+                item_r = item_x + 1;
+            }
 
             if (h < previous_h && item_r < previous_x)
                 continue;
 
-            const auto col = calculate_color(h, duration, k);
+            const auto col = calculate_color(h, maxItemDuration, k);
             const auto color = 0x00ffffff & QColor::fromHsvF((1.0 - col) * 0.375, 0.85, 0.85).rgb();
 
             if (previousColor != color)
@@ -1135,6 +1530,12 @@ void GraphicsHistogramItem::updateImageAsync(QRectF _boundingRect, HistRegime _r
 
     m_workerTopDuration = _top_duration;
     m_workerBottomDuration = _bottom_duration;
+
+    if (_bindMode && totalCount != 0)
+    {
+        m_workerAvgDuration /= totalCount;
+        m_workerMedianDuration = profiler_gui::calculateMedian(durations);
+    }
 
     setReady(true);
 }
@@ -1157,7 +1558,7 @@ GraphicsScrollbar::GraphicsScrollbar(int _initialHeight, QWidget* _parent)
     m_histogramItem->hide();
 
     connect(&EASY_GLOBALS.events, &profiler_gui::GlobalSignals::expectedFrameTimeChanged,
-            this, &This::onExpectedFrameTimeChanged);
+            this, &This::repaintHistogramImage);
 
     connect(&EASY_GLOBALS.events, &profiler_gui::GlobalSignals::autoAdjustHistogramChanged,
             this, &This::onAutoAdjustHistogramChanged);
@@ -1178,20 +1579,20 @@ GraphicsScrollbar::~GraphicsScrollbar()
 
 //////////////////////////////////////////////////////////////////////////
 
+void GraphicsScrollbar::repaintHistogramImage()
+{
+    if (m_histogramItem->isVisible())
+    {
+        m_histogramItem->updateImage();
+        scene()->update();
+    }
+}
+
 void GraphicsScrollbar::onThreadViewChanged()
 {
     if (m_histogramItem->isVisible())
     {
         m_histogramItem->validateName();
-        scene()->update();
-    }
-}
-
-void GraphicsScrollbar::onExpectedFrameTimeChanged()
-{
-    if (m_histogramItem->isVisible())
-    {
-        m_histogramItem->updateImage();
         scene()->update();
     }
 }
@@ -1216,7 +1617,7 @@ void GraphicsScrollbar::clear()
     Parent::clear();
 }
 
-profiler::thread_id_t GraphicsScrollbar::hystThread() const
+profiler::thread_id_t GraphicsScrollbar::histThread() const
 {
     return m_histogramItem->threadId();
 }

@@ -8,7 +8,7 @@
 * description       : The file contains implementation of GraphicsBlockItem.
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -58,6 +58,8 @@
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 
+namespace {
+
 enum BlockItemState : int8_t
 {
     BLOCK_ITEM_DO_PAINT_FIRST = -2,
@@ -71,7 +73,7 @@ enum BlockItemState : int8_t
 EASY_CONSTEXPR int MIN_SYNC_SPACING = 1;
 EASY_CONSTEXPR int MIN_SYNC_SIZE = 3;
 EASY_CONSTEXPR int EVENT_HEIGHT = 4;
-EASY_CONSTEXPR QRgb BORDERS_COLOR = profiler::colors::Grey600 & 0x00ffffff;// 0x00686868;
+EASY_CONSTEXPR auto BORDERS_COLOR = profiler_gui::BLOCK_BORDER_COLOR;
 
 inline QRgb selectedItemBorderColor(profiler::color_t _color) {
     return ::profiler_gui::isLightColor(_color, 192) ? profiler::colors::Black : profiler::colors::RichRed;
@@ -91,7 +93,14 @@ EASY_FORCE_INLINE void restoreItemFont(QPainter* /*painter*/)
     //painter->setFont(EASY_GLOBALS.font.item);
 }
 
-const QPen HIGHLIGHTER_PEN = ([]() -> QPen { QPen p(profiler::colors::Black); p.setStyle(Qt::DotLine); p.setWidth(2); return p; })();
+const QPen HIGHLIGHTER_PEN = ([]() -> QPen {
+    QPen p(profiler::colors::Black);
+    p.setStyle(Qt::DotLine);
+    p.setWidth(2);
+    return p;
+})();
+
+} // end of namespace <noname>.
 
 #ifdef max
 #undef max
@@ -1146,7 +1155,7 @@ void GraphicsBlockItem::getBlocks(qreal _left, qreal _right, ::profiler_gui::Tre
     size_t itemIndex = 0;
     if (first != level0.end())
     {
-        itemIndex = first - level0.begin();
+        itemIndex = static_cast<size_t>(std::distance(level0.begin(), first));
         if (itemIndex > 0)
             itemIndex -= 1;
     }

@@ -12,7 +12,7 @@
 *                   : *
 * ----------------- :
 * license           : Lightweight profiler library for c++
-*                   : Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+*                   : Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 *                   :
 *                   : Licensed under either of
 *                   :     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -52,6 +52,8 @@
 *                   : limitations under the License.
 ************************************************************************/
 
+#include <QList>
+#include <QTreeWidgetItem>
 #include "common_functions.h"
 
 template <class T>
@@ -79,7 +81,7 @@ inline EASY_CONSTEXPR_FCN uint16_t sizeOf() {
     return static_cast<uint16_t>(sizeof(typename profiler::StdType<type>::value_type));
 }
 
-QString arrayToString(const profiler::ArbitraryValue& _serializedValue, int _index)
+static QString arrayToString(const profiler::ArbitraryValue& _serializedValue, int _index)
 {
     switch (_serializedValue.type())
     {
@@ -105,7 +107,7 @@ QString arrayToString(const profiler::ArbitraryValue& _serializedValue, int _ind
     }
 }
 
-QString singleValueToString(const profiler::ArbitraryValue& _serializedValue)
+static QString singleValueToString(const profiler::ArbitraryValue& _serializedValue)
 {
     switch (_serializedValue.type())
     {
@@ -124,6 +126,32 @@ QString singleValueToString(const profiler::ArbitraryValue& _serializedValue)
         case profiler::DataType::String: return _serializedValue.data();
         default: return QStringLiteral("??");
     }
+}
+
+template <class T>
+static QString shortenCountStringUnsigned(T count, int precision)
+{
+    if (count >= 1000000)
+        return QStringLiteral("%1m").arg(QString::number(count * 1e-6, 'f', precision));
+
+    if (count >= 1000)
+        return QStringLiteral("%1k").arg(QString::number(count * 1e-3, 'f', precision));
+
+    return QString::number(count);
+}
+
+template <class T>
+static QString shortenCountStringSigned(T count, int precision)
+{
+    const auto absCount = std::abs(count);
+
+    if (absCount >= 1000000)
+        return QStringLiteral("%1m").arg(QString::number(count * 1e-6, 'f', precision));
+
+    if (absCount >= 1000)
+        return QStringLiteral("%1k").arg(QString::number(count * 1e-3, 'f', precision));
+
+    return QString::number(count);
 }
 
 namespace profiler_gui {
@@ -291,13 +319,32 @@ namespace profiler_gui {
 
     //////////////////////////////////////////////////////////////////////////
 
+    QString shortenCountString(uint64_t count, int precision)
+    {
+        return shortenCountStringUnsigned(count, precision);
+    }
+
+    QString shortenCountString(uint32_t count, int precision)
+    {
+        return shortenCountStringUnsigned(count, precision);
+    }
+
+    QString shortenCountString(int64_t count, int precision)
+    {
+        return shortenCountStringSigned(count, precision);
+    }
+
+    QString shortenCountString(int32_t count, int precision)
+    {
+        return shortenCountStringSigned(count, precision);
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+
     QFont EFont(QFont::StyleHint _hint, const char* _family, int _size, int _weight)
     {
-        QFont f;
+        QFont f(_family, _size, _weight);
         f.setStyleHint(_hint, QFont::PreferMatch);
-        f.setFamily(_family);
-        f.setPointSize(_size);
-        f.setWeight(_weight);
         return f;
     }
 
@@ -461,5 +508,109 @@ namespace profiler_gui {
     }
 
     //////////////////////////////////////////////////////////////////////////
+
+    void deleteTreeItem(QTreeWidgetItem* item)
+    {
+        if (item == nullptr)
+        {
+            return;
+        }
+
+        QList<QTreeWidgetItem*> stack;
+        stack.append(item);
+
+        while (!stack.isEmpty())
+        {
+            auto i = stack.takeFirst();
+            stack.append(i->takeChildren());
+            delete i;
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+
+    profiler::timestamp_t calculateMedian(const DurationsCountMap& durations)
+    {
+        if (durations.empty())
+        {
+            return 0;
+        }
+
+        profiler::timestamp_t median = 0;
+
+        size_t total_count = 0;
+        for (auto& kv : durations)
+        {
+            total_count += kv.second.count;
+        }
+
+        if (total_count & 1)
+        {
+            const auto index = total_count >> 1;
+            size_t i = 0;
+            for (auto& kv : durations)
+            {
+                const auto count = kv.second.count;
+
+                i += count;
+                if (i < index)
+                {
+                    continue;
+                }
+
+                median = kv.first;
+                break;
+            }
+        }
+        else
+        {
+            const auto index2 = total_count >> 1;
+            const auto index1 = index2 - 1;
+
+            size_t i = 0;
+            bool i1 = false;
+            for (auto& kv : durations)
+            {
+                const auto count = kv.second.count;
+
+                i += count;
+                if (i < index1)
+                {
+                    continue;
+                }
+
+                if (!i1)
+                {
+                    i1 = true;
+                    median = kv.first;
+                }
+
+                if (i < index2)
+                {
+                    continue;
+                }
+
+                median += kv.first;
+                median >>= 1;
+
+                break;
+            }
+        }
+
+        return median;
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+
+    void clear_stream(std::stringstream& _stream)
+    {
+#if defined(__GNUC__) && __GNUC__ < 5
+        // gcc 4 has a known bug which has been solved in gcc 5:
+        // std::stringstream has no swap() method :(
+        _stream.str(std::string());
+#else
+        std::stringstream().swap(_stream);
+#endif
+    }
 
 } // end of namespace profiler_gui.

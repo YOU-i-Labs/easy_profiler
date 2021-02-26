@@ -1,6 +1,6 @@
 /**
 Lightweight profiler library for c++
-Copyright(C) 2016-2018  Sergey Yagovtsev, Victor Zarubkin
+Copyright(C) 2016-2019  Sergey Yagovtsev, Victor Zarubkin
 
 Licensed under either of
     * MIT license (LICENSE.MIT or http://opensource.org/licenses/MIT)
@@ -43,10 +43,11 @@ The Apache License, Version 2.0 (the "License");
 #ifndef EASY_PROFILER_STACK_BUFFER_H
 #define EASY_PROFILER_STACK_BUFFER_H
 
-#include "nonscoped_block.h"
-#include <list>
 #include <algorithm>
 #include <cstdlib>
+#include <list>
+
+#include "nonscoped_block.h"
 
 #ifdef max
 #undef max
