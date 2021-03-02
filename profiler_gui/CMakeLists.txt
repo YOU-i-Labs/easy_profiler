@@ -135,6 +135,13 @@ if (Qt5Widgets_FOUND)
 
     if (APPLE)
         target_link_libraries(profiler_gui PUBLIC "-framework Security")
+
+        set_target_properties(profiler_gui
+            PROPERTIES
+            XCODE_ATTRIBUTE_ARCHS "x86_64"
+            XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH "NO"
+        )
+
     endif()
 
     target_link_libraries(profiler_gui PUBLIC Qt5::Widgets Qt5::PrintSupport Qt5::Core Qt5::Gui easy_profiler)
