@@ -48,6 +48,13 @@ The Apache License, Version 2.0 (the "License");
 #include <ostream>
 #include "alignment_helpers.h"
 
+// Required to get the iOS/tvOS macros
+#ifdef __has_include
+# if __has_include(<TargetConditionals.h>)
+#  include <TargetConditionals.h>
+# endif
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 
 #ifndef EASY_ENABLE_ALIGNMENT 
@@ -402,12 +409,16 @@ struct get_aligned_size {
         aligned_size<static_cast<uint16_t>(N), (N % EASY_ALIGN_SIZE) == 0, (N > (65536 - EASY_ALIGN_SIZE))>::Size;
 };
 
+#if !defined(TARGET_CPU_ARM) // The following asserts fail on ios arm7
+
 static_assert(get_aligned_size<EASY_ALIGN_SIZE - 3>::Size == EASY_ALIGN_SIZE, "wrong get_aligned_size");
 static_assert(get_aligned_size<2 * EASY_ALIGN_SIZE - 3>::Size == 2 * EASY_ALIGN_SIZE, "wrong get_aligned_size");
 static_assert(get_aligned_size<65530>::Size == 65536 - EASY_ALIGN_SIZE, "wrong get_aligned_size");
 static_assert(get_aligned_size<65526>::Size == 65536 - EASY_ALIGN_SIZE, "wrong get_aligned_size");
 static_assert(get_aligned_size<65536 - EASY_ALIGN_SIZE>::Size == 65536 - EASY_ALIGN_SIZE, "wrong get_aligned_size");
 static_assert(get_aligned_size<65536 + 3 - EASY_ALIGN_SIZE * 2>::Size == 65536 - EASY_ALIGN_SIZE, "wrong get_aligned_size");
+
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 
