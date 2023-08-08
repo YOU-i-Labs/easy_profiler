@@ -58,6 +58,7 @@
 
 #include <map>
 #include <vector>
+#include <limits>
 #include <easy/reader.h>
 #include <QObject>
 
